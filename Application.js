@@ -28,12 +28,11 @@ export class Application {
                 console.log(`Help for command ${command.name}:
 
 Usage: ${this.name} ${command.name} ${Object.entries(command.optionsoptions.namedArgs)
-                    .map(([name, opt]) => opt.required ? `--${name} <${name}> ` : `[--${name} <${name}>] `).join("")} ${command.optionsoptions.positionalArgs.map(opt => opt.required ? `<${opt.name}> ` : `[<${opt.name}>] `).join("")}
-
+                    .map(([name, opt]) => opt.required ? `--${name} <${name}> ` : `[--${name} <${name}>] `).join("")}${command.optionsoptions.positionalArgs.map(opt => opt.required ? `<${opt.name}> ` : `[<${opt.name}>] `).join("")}
 ${Object.entries(command.optionsoptions.namedArgs)
-                    .map(([name, opt]) => `${opt.required ? name : `[${name}]`}: ${opt.description}`).join("\n")}
+                    .map(([name, opt]) => `${opt.required ? `<${name}>` : `<${name}>`}: ${opt.description}`).join("\n")}
 ${command.optionsoptions.positionalArgs
-                    .map((opt) => `${opt.required ? opt.name : `[${opt.name}]`}: ${opt.description}`).join("\n")}
+                    .map((opt) => `${opt.required ? `<${opt.name}>` : `<${opt.name}>`}: ${opt.description}`).join("\n")}
 `);
             }
         }
