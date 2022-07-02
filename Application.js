@@ -4,6 +4,7 @@ export class Application {
         this.name = name;
         this.description = description;
         this.commands = {};
+        this.aliases = {};
         this.commands["help"] = new Subcommand("help", this.runHelpCommand.bind(this), "Displays help on all commands or a specific subcommand.", {
             positionalArgs: [{
                     name: "command",
@@ -17,6 +18,9 @@ export class Application {
     command(name, description, handler, isDefault, optionsoptions) {
         this.commands[name] = new Subcommand(name, handler, description, optionsoptions, isDefault);
         return this; //For daisy chaining
+    }
+    alias(name, target) {
+        this.aliases[name] = target;
     }
     runHelpCommand(opts) {
         if (!(this instanceof Application)) {
@@ -121,8 +125,12 @@ Usage: ${this.name} [command] [options]
         if ("help" in parsedArgs.namedArgs) {
             command = this.commands["help"];
         }
-        else if (parsedArgs.positionalArgs[0]) {
+        else if (this.commands[parsedArgs.positionalArgs[0]]) {
             command = this.commands[parsedArgs.positionalArgs[0]];
+            positionalArgs.splice(0, 1);
+        }
+        else if (this.aliases[parsedArgs.positionalArgs[0]]) {
+            command = this.commands[this.aliases[parsedArgs.positionalArgs[0]]];
             positionalArgs.splice(0, 1);
         }
         else {

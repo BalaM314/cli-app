@@ -1,5 +1,6 @@
 import path from "path";
 
+
 interface Options {
 	namedArgs: {
 		[name: string]: string | undefined;
@@ -27,6 +28,9 @@ export class Application {
 	commands: {
 		[name: string]: Subcommand | undefined
 	} = {};
+	aliases: {
+		[index:string]:string;
+	} = {};
 	sourceDirectory:string;
 	constructor(public name:string, public description:string){
 		this.commands["help"] = new Subcommand(
@@ -47,6 +51,9 @@ export class Application {
 	command(name:string, description:string, handler:CommandHandler, isDefault?:boolean, optionsoptions?:Optionsoptions):this {
 		this.commands[name] = new Subcommand(name, handler, description, optionsoptions, isDefault);
 		return this;//For daisy chaining
+	}
+	alias(name:string, target:string){
+		this.aliases[name] = target;
 	}
 	runHelpCommand(opts:Options):number {
 		if(!(this instanceof Application)){
@@ -165,8 +172,11 @@ Usage: ${this.name} [command] [options]
 		let { positionalArgs } = parsedArgs;
 		if("help" in parsedArgs.namedArgs){
 			command = this.commands["help"]!;
-		} else if(parsedArgs.positionalArgs[0]){
+		} else if(this.commands[parsedArgs.positionalArgs[0]]){
 			command = this.commands[parsedArgs.positionalArgs[0]];
+			positionalArgs.splice(0,1);
+		} else if(this.aliases[parsedArgs.positionalArgs[0]]){
+			command = this.commands[this.aliases[parsedArgs.positionalArgs[0]]];
 			positionalArgs.splice(0,1);
 		} else {
 			command = Object.values(this.commands).filter(command => command?.defaultCommand)[0] ?? this.commands["help"]!;
