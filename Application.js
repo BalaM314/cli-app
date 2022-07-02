@@ -82,7 +82,7 @@ Usage: ${this.name} [command] [options]
         if (!providedArgs[0].includes("node")) {
             throw new Error("Attempted to parse invalid args. Unless you are running this application in a strange way, this is likely an error with the application itself.");
         }
-        let args = this.splitLineIntoArguments(providedArgs.slice(2).join(" "));
+        let args = providedArgs.slice(2);
         while (true) {
             i++;
             if (i > 1000) {

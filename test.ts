@@ -1,6 +1,8 @@
 import { Application } from "./Application.js";
 
 
+console.log(`argv: ${process.argv}`);
+
 let myApp = new Application("test-app", "A test application for testing cli-app.");
 myApp.command("doStuff", "does stuff", (opts) => {
 	if(opts.namedArgs["sus"]){
@@ -12,8 +14,8 @@ myApp.command("doStuff", "does stuff", (opts) => {
 	console.log("test command");
 })
 .command("doOtherStuff", "does other stuff", (opts, app) => {
-	console.log(`Did ${opts.positionalArgs[0]} to ${opts.namedArgs["thing"]}`);
-
+	console.log(`Did ${opts.positionalArgs[0]} to ${opts.namedArgs["required"]}`);
+	console.log(`default val: ${opts.namedArgs["defaultVal"]}`);
 }, false, {
 	namedArgs: {
 		required: {
@@ -24,6 +26,11 @@ myApp.command("doStuff", "does stuff", (opts) => {
 			description: "This is optional",
 			required: false
 		},
+		defaultVal: {
+			description: "this has a default value of SussyAmogus",
+			required: true,
+			default: "sussyAmogus"
+		}
 	},
 	positionalArgs: [
 		{
