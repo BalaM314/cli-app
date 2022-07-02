@@ -12,7 +12,7 @@ export class Application {
                 }],
             namedArgs: {}
         });
-        this.sourceDirectory = null;
+        this.sourceDirectory = "null";
     }
     command(name, description, handler, isDefault, optionsoptions) {
         this.commands[name] = new Subcommand(name, handler, description, optionsoptions, isDefault);
@@ -147,6 +147,8 @@ export class Subcommand {
         this.defaultCommand = defaultCommand;
     }
     run(options, application) {
+        if (application.sourceDirectory == "null")
+            throw new Error("application.sourceDirectory is null. Don't call subcommand.run() directly.\nThis is an error with cli-app or the application.");
         let requiredNamedArgs = Object.entries(this.optionsoptions.namedArgs)
             .filter(([name, opt]) => opt)
             .filter(([name, opt]) => opt.required);

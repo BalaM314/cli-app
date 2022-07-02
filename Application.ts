@@ -27,7 +27,7 @@ export class Application {
 	commands: {
 		[name: string]: Subcommand | undefined
 	} = {};
-	sourceDirectory:string | null;
+	sourceDirectory:string;
 	constructor(public name:string, public description:string){
 		this.commands["help"] = new Subcommand(
 			"help",
@@ -42,7 +42,7 @@ export class Application {
 				namedArgs: {}
 			}
 		);
-		this.sourceDirectory = null;
+		this.sourceDirectory = "null";
 	}
 	command(name:string, description:string, handler:CommandHandler, isDefault?:boolean, optionsoptions?:Optionsoptions):this {
 		this.commands[name] = new Subcommand(name, handler, description, optionsoptions, isDefault);
@@ -192,6 +192,7 @@ export class Subcommand {
 
 	}
 	run(options:Options, application:Application){
+		if(application.sourceDirectory == "null") throw new Error("application.sourceDirectory is null. Don't call subcommand.run() directly.\nThis is an error with cli-app or the application.");
 		let requiredNamedArgs = Object.entries(this.optionsoptions.namedArgs)
 			.filter(([name, opt]) => opt)
 			.filter(([name, opt]) => opt.required);
@@ -217,5 +218,4 @@ export class Subcommand {
 		}, application);
 	}
 }
-
 
