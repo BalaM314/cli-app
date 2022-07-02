@@ -1,0 +1,32 @@
+{
+  "name": "cli-app",
+  "version": "1.0.0",
+  "description": "A tool to help you build CLI applications.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BalaM314/cli-app.git"
+  },
+  "keywords": [
+    "cli",
+    "app"
+  ],
+  "author": "BalaM314",
+  "license": "GPL-3.0-or-later",
+  "bugs": {
+    "url": "https://github.com/BalaM314/cli-app/issues"
+  },
+  "homepage": "https://github.com/BalaM314/cli-app#readme",
+  "type": "module",
+  "devDependencies": {
+    "@types/jasmine": "^4.0.3",
+    "@types/node": "^17.0.23",
+    "typescript": "^4.7.2"
+  },
+  "dependencies": {
+    
+  }
+}
