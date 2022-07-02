@@ -117,11 +117,13 @@ Usage: ${this.name} [command] [options]
         this.sourceDirectory = path.join(process.argv[1], "..");
         let parsedArgs = Application.parseArgs(args);
         let command;
+        let { positionalArgs } = parsedArgs;
         if ("help" in parsedArgs.namedArgs) {
             command = this.commands["help"];
         }
         else if (parsedArgs.positionalArgs[0]) {
             command = this.commands[parsedArgs.positionalArgs[0]];
+            positionalArgs.splice(0, 1);
         }
         else {
             command = Object.values(this.commands).filter(command => command?.defaultCommand)[0] ?? this.commands["help"];
@@ -129,7 +131,7 @@ Usage: ${this.name} [command] [options]
         if (command) {
             command.run({
                 namedArgs: parsedArgs.namedArgs,
-                positionalArgs: parsedArgs.positionalArgs.slice(1)
+                positionalArgs: positionalArgs
             }, this);
         }
         else {
