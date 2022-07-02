@@ -39,6 +39,9 @@ ${command.optionsoptions.positionalArgs
                     .map((opt) => `${opt.required ? `<${opt.name}>` : `<${opt.name}>`}: ${opt.description}`).join("\n")}
 `);
             }
+            else {
+                console.log(`Unknown command ${opts.positionalArgs[0]}. Run ${this.name} help for a list of all commands.`);
+            }
         }
         else {
             console.log(`${this.name}: ${this.description}

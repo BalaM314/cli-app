@@ -89,6 +89,8 @@ ${
 }
 `
 				);
+			} else {
+				console.log(`Unknown command ${opts.positionalArgs[0]}. Run ${this.name} help for a list of all commands.`);
 			}
 		} else {
 			console.log(
