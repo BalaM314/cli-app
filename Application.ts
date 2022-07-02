@@ -1,3 +1,4 @@
+import path from "path";
 
 interface Options {
 	namedArgs: {
@@ -26,6 +27,7 @@ export class Application {
 	commands: {
 		[name: string]: Subcommand | undefined
 	} = {};
+	sourceDirectory:string | null;
 	constructor(public name:string, public description:string){
 		this.commands["help"] = new Subcommand(
 			"help",
@@ -40,6 +42,7 @@ export class Application {
 				namedArgs: {}
 			}
 		);
+		this.sourceDirectory = null;
 	}
 	command(name:string, description:string, handler:CommandHandler, isDefault?:boolean, optionsoptions?:Optionsoptions):this {
 		this.commands[name] = new Subcommand(name, handler, description, optionsoptions, isDefault);
@@ -157,6 +160,7 @@ Usage: ${this.name} [command] [options]
 		};
 	}
 	run(args:string[]){
+		this.sourceDirectory = path.join(process.argv[1], "..");
 		let parsedArgs = Application.parseArgs(args);
 		let command:Subcommand | undefined;
 		if("help" in parsedArgs.namedArgs){

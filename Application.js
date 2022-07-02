@@ -1,3 +1,4 @@
+import path from "path";
 export class Application {
     constructor(name, description) {
         this.name = name;
@@ -11,6 +12,7 @@ export class Application {
                 }],
             namedArgs: {}
         });
+        this.sourceDirectory = null;
     }
     command(name, description, handler, isDefault, optionsoptions) {
         this.commands[name] = new Subcommand(name, handler, description, optionsoptions, isDefault);
@@ -113,6 +115,7 @@ Usage: ${this.name} [command] [options]
         };
     }
     run(args) {
+        this.sourceDirectory = path.join(process.argv[1], "..");
         let parsedArgs = Application.parseArgs(args);
         let command;
         if ("help" in parsedArgs.namedArgs) {
