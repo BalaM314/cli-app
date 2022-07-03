@@ -16,7 +16,11 @@ export class Application {
         this.sourceDirectory = "null";
     }
     command(name, description, handler, isDefault, optionsoptions) {
-        this.commands[name] = new Subcommand(name, handler, description, optionsoptions, isDefault);
+        this.commands[name] = new Subcommand(name, handler, description, {
+            namedArgs: optionsoptions?.namedArgs ?? {},
+            positionalArgs: optionsoptions?.positionalArgs ?? [],
+            aliases: optionsoptions?.aliases ?? {}
+        }, isDefault);
         return this; //For daisy chaining
     }
     alias(name, target) {
@@ -141,7 +145,10 @@ Usage: ${this.name} [command] [options]
         }
         if (command) {
             command.run({
-                namedArgs: parsedArgs.namedArgs,
+                namedArgs: {
+                    ...Object.fromEntries(Object.entries(parsedArgs.namedArgs)
+                        .map(([name, value]) => [command?.optionsoptions.aliases?.[name] ?? name, value]))
+                },
                 positionalArgs: positionalArgs
             }, this);
         }

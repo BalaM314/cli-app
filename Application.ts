@@ -11,6 +11,9 @@ interface Optionsoptions {
 	namedArgs: {
 		[option: string]: ArgOptions;
 	};
+	aliases?: {
+		[name: string]: string;
+	}
 	positionalArgs: PositionalArgOptions[]
 }
 interface ArgOptions {
@@ -48,8 +51,12 @@ export class Application {
 		);
 		this.sourceDirectory = "null";
 	}
-	command(name:string, description:string, handler:CommandHandler, isDefault?:boolean, optionsoptions?:Optionsoptions):this {
-		this.commands[name] = new Subcommand(name, handler, description, optionsoptions, isDefault);
+	command(name:string, description:string, handler:CommandHandler, isDefault?:boolean, optionsoptions?:Partial<Optionsoptions>):this {
+		this.commands[name] = new Subcommand(name, handler, description, {
+			namedArgs: optionsoptions?.namedArgs ?? {},
+			positionalArgs: optionsoptions?.positionalArgs ?? [],
+			aliases: optionsoptions?.aliases ?? {}
+		}, isDefault);
 		return this;//For daisy chaining
 	}
 	alias(name:string, target:string){
@@ -185,7 +192,14 @@ Usage: ${this.name} [command] [options]
 		}
 		if(command){
 			command.run({
-				namedArgs: parsedArgs.namedArgs,
+				namedArgs: {
+					...Object.fromEntries(
+						Object.entries(parsedArgs.namedArgs)
+						.map(([name, value]) => 
+							[command?.optionsoptions.aliases?.[name] ?? name, value]
+						)
+					)
+				},
 				positionalArgs: positionalArgs
 			}, this);
 		} else {

@@ -32,6 +32,9 @@ myApp.command("doStuff", "does stuff", (opts) => {
 			default: "sussyAmogus"
 		}
 	},
+	aliases: {
+		flarogus: "required"
+	},
 	positionalArgs: [
 		{
 			name: "required",
