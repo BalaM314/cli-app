@@ -148,7 +148,7 @@ Usage: ${this.name} [command] [options]
 		} = {};
 		let commands: string[] = [];
 		let i = 0;
-		if(!providedArgs[0].includes("node")){
+		if(!providedArgs[0]?.includes("node")){
 			throw new Error("Attempted to parse invalid args. Unless you are running this application in a strange way, this is likely an error with the application itself.");
 		}
 		let args = providedArgs.slice(2);
