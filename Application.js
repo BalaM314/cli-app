@@ -28,7 +28,7 @@ export class Application {
     }
     runHelpCommand(opts) {
         if (!(this instanceof Application)) {
-            throw new Error("application.runHelpCommand was bound incorrectly. This is most likely an error with cli-app.");
+            throw new ApplicationError("application.runHelpCommand was bound incorrectly. This is most likely an error with cli-app.");
         }
         if (opts.positionalArgs[0]) {
             let command = this.commands[opts.positionalArgs[0]];
@@ -92,13 +92,13 @@ Usage: ${this.name} [command] [options]
         let commands = [];
         let i = 0;
         if (!providedArgs[0]?.includes("node")) {
-            throw new Error("Attempted to parse invalid args. Unless you are running this application in a strange way, this is likely an error with the application itself.");
+            throw new ApplicationError("Attempted to parse invalid args. Unless you are running this application in a strange way, this is likely an error with the application itself.");
         }
         let args = providedArgs.slice(2);
         while (true) {
             i++;
             if (i > 1000) {
-                throw new Error("Too many arguments!");
+                throw new ApplicationError("Too many arguments!");
             }
             let arg = args.splice(0, 1)[0];
             if (arg == undefined)
@@ -144,13 +144,24 @@ Usage: ${this.name} [command] [options]
             command = Object.values(this.commands).filter(command => command?.defaultCommand)[0] ?? this.commands["help"];
         }
         if (command) {
-            command.run({
-                namedArgs: {
-                    ...Object.fromEntries(Object.entries(parsedArgs.namedArgs)
-                        .map(([name, value]) => [command?.optionsoptions.aliases?.[name] ?? name, value]))
-                },
-                positionalArgs: positionalArgs
-            }, this);
+            try {
+                command.run({
+                    namedArgs: {
+                        ...Object.fromEntries(Object.entries(parsedArgs.namedArgs)
+                            .map(([name, value]) => [command?.optionsoptions.aliases?.[name] ?? name, value]))
+                    },
+                    positionalArgs: positionalArgs
+                }, this);
+            }
+            catch (err) {
+                if (err instanceof ApplicationError) {
+                    console.error(`Error: ${err.message}`);
+                }
+                else {
+                    console.error("The command encountered an unhandled runtime error.");
+                    console.error(err);
+                }
+            }
         }
         else {
             console.error(`Unknown command: ${parsedArgs.positionalArgs[0]}\nRun "${this.name} help" for a list of all commands.`);
@@ -179,12 +190,12 @@ export class Subcommand {
                     options.namedArgs[name] = opt.default;
                 }
                 else {
-                    throw new Error(`No value specified for required named argument "${name}".`);
+                    throw new ApplicationError(`No value specified for required named argument "${name}".`);
                 }
             }
         });
         if (requiredPositionalArgs.length > options.positionalArgs.length) {
-            throw new Error(`Missing required positional arguments.\n(default values for positional args are not yet implemented)`);
+            throw new ApplicationError(`Missing required positional arguments.\n(default values for positional args are not yet implemented)`);
             //TODO the whole positional args thing needs to be fixed.
         }
         //TODO there are so many issues with checking if args exist.
