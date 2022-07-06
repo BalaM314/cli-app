@@ -1,7 +1,6 @@
 import { Application } from "./Application.js";
 
 
-console.log(`argv: ${process.argv}`);
 
 let myApp = new Application("test-app", "A test application for testing cli-app.");
 myApp.command("doStuff", "does stuff", (opts) => {
