@@ -1,6 +1,6 @@
 import path from "path";
-import { ApplicationError } from "./classes";
-import { CommandHandler, Optionsoptions, Options } from "./types";
+import { ApplicationError } from "./classes.js";
+import { CommandHandler, Optionsoptions, Options } from "./types.js";
 
 
 

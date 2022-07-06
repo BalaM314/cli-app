@@ -1,5 +1,5 @@
 import path from "path";
-import { ApplicationError } from "./classes";
+import { ApplicationError } from "./classes.js";
 export class Application {
     constructor(name, description) {
         this.name = name;
