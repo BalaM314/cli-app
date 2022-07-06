@@ -1,4 +1,5 @@
 import path from "path";
+import { ApplicationError } from "./classes";
 export class Application {
     constructor(name, description) {
         this.name = name;
@@ -144,6 +145,12 @@ Usage: ${this.name} [command] [options]
             command = Object.values(this.commands).filter(command => command?.defaultCommand)[0] ?? this.commands["help"];
         }
         if (command) {
+            //Loop through each named argument passed
+            Object.keys(parsedArgs.namedArgs).forEach(arg => 
+            //If the arg is not in the named arguments or the aliases
+            (arg in command.optionsoptions.namedArgs || arg in (command.optionsoptions.aliases ?? {})) ? "" :
+                //Display a warning
+                console.warn(`Unknown argument ${arg}`));
             try {
                 command.run({
                     namedArgs: {
