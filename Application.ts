@@ -28,16 +28,18 @@ export class Application {
 		);
 		this.sourceDirectory = "null";
 	}
-	command(name:string, description:string, handler:CommandHandler, isDefault?:boolean, optionsoptions?:PartialOptionsoptions):this {
+	command(name:string, description:string, handler:CommandHandler, isDefault?:boolean, optionsoptions?:PartialOptionsoptions, aliases?:string[]):this {
 		this.commands[name] = new Subcommand(name, handler, description, {
 			namedArgs: optionsoptions?.namedArgs ?? {},
 			positionalArgs: optionsoptions?.positionalArgs ?? [],
 			aliases: optionsoptions?.aliases ?? {}
 		}, isDefault);
+		if(aliases) aliases.forEach((alias) => this.alias(alias, name));
 		return this;//For daisy chaining
 	}
 	alias(name:string, target:string){
 		this.aliases[name] = target;
+		return this;
 	}
 	runHelpCommand(opts:Options):number {
 		if(!(this instanceof Application)){

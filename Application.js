@@ -16,16 +16,19 @@ export class Application {
         });
         this.sourceDirectory = "null";
     }
-    command(name, description, handler, isDefault, optionsoptions) {
+    command(name, description, handler, isDefault, optionsoptions, aliases) {
         this.commands[name] = new Subcommand(name, handler, description, {
             namedArgs: optionsoptions?.namedArgs ?? {},
             positionalArgs: optionsoptions?.positionalArgs ?? [],
             aliases: optionsoptions?.aliases ?? {}
         }, isDefault);
+        if (aliases)
+            aliases.forEach((alias) => this.alias(alias, name));
         return this; //For daisy chaining
     }
     alias(name, target) {
         this.aliases[name] = target;
+        return this;
     }
     runHelpCommand(opts) {
         if (!(this instanceof Application)) {
