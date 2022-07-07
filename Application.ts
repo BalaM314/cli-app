@@ -1,6 +1,6 @@
 import path from "path";
 import { ApplicationError } from "./classes.js";
-import { CommandHandler, Optionsoptions, Options } from "./types.js";
+import { CommandHandler, Options, PartialOptionsoptions, RequiredOptionsoptions } from "./types.js";
 
 
 
@@ -28,7 +28,7 @@ export class Application {
 		);
 		this.sourceDirectory = "null";
 	}
-	command(name:string, description:string, handler:CommandHandler, isDefault?:boolean, optionsoptions?:Partial<Optionsoptions>):this {
+	command(name:string, description:string, handler:CommandHandler, isDefault?:boolean, optionsoptions?:PartialOptionsoptions):this {
 		this.commands[name] = new Subcommand(name, handler, description, {
 			namedArgs: optionsoptions?.namedArgs ?? {},
 			positionalArgs: optionsoptions?.positionalArgs ?? [],
@@ -52,7 +52,8 @@ export class Application {
 Usage: ${this.name} ${command.name} ${
 	Object.entries(command.optionsoptions.namedArgs)
 	.map(([name, opt]) => 
-		opt.required ? `--${name} <${name}> ` : `[--${name} <${name}>] `
+	//Template literals make stuff easier to read right?
+		opt.required ? `--${name}${opt.needsValue ? ` <${name}> ` : ``}` : `[--${name}${opt.needsValue ? ` <${name}> ` : ``}] `
 	).join("")
 }${
 	command.optionsoptions.positionalArgs.map(opt => 
@@ -204,14 +205,24 @@ Usage: ${this.name} [command] [options]
 }
 
 export class Subcommand {
+	optionsoptions:RequiredOptionsoptions;
 	constructor(
 		public name:string,
 		public handler:CommandHandler,
 		public description:string = "No description provided",
-		public optionsoptions:Optionsoptions = {namedArgs: {}, positionalArgs: []},
+		optionsoptions:PartialOptionsoptions = {namedArgs: {}, positionalArgs: []},
 		public defaultCommand:boolean = false
 	){
-
+		this.optionsoptions = {
+			namedArgs: Object.fromEntries(Object.entries(optionsoptions.namedArgs).map(([key, value]) => [key, {
+				description: value.description ?? "No description provided",
+				required: value.required ?? false,
+				default: value.default ?? "",
+				needsValue: value.needsValue ?? true
+			}])),
+			aliases: optionsoptions.aliases,
+			positionalArgs: optionsoptions.positionalArgs ?? []
+		};
 	}
 	run(options:Options, application:Application){
 		if(application.sourceDirectory == "null") throw new Error("application.sourceDirectory is null. Don't call subcommand.run() directly.\nThis is an error with cli-app or the application.");

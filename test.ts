@@ -29,6 +29,10 @@ myApp.command("doStuff", "does stuff", (opts) => {
 			description: "this has a default value of SussyAmogus",
 			required: true,
 			default: "sussyAmogus"
+		},
+		noValue: {
+			description: "this has no value",
+			needsValue: false
 		}
 	},
 	aliases: {

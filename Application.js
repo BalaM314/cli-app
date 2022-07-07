@@ -37,7 +37,9 @@ export class Application {
                 console.log(`Help for command ${command.name}:
 
 Usage: ${this.name} ${command.name} ${Object.entries(command.optionsoptions.namedArgs)
-                    .map(([name, opt]) => opt.required ? `--${name} <${name}> ` : `[--${name} <${name}>] `).join("")}${command.optionsoptions.positionalArgs.map(opt => opt.required ? `<${opt.name}> ` : `[<${opt.name}>] `).join("")}
+                    .map(([name, opt]) => 
+                //Template literals make stuff easier to read right?
+                opt.required ? `--${name}${opt.needsValue ? ` <${name}> ` : ``}` : `[--${name}${opt.needsValue ? ` <${name}> ` : ``}] `).join("")}${command.optionsoptions.positionalArgs.map(opt => opt.required ? `<${opt.name}> ` : `[<${opt.name}>] `).join("")}
 ${Object.entries(command.optionsoptions.namedArgs)
                     .map(([name, opt]) => `${opt.required ? `<${name}>` : `<${name}>`}: ${opt.description}`).join("\n")}
 ${command.optionsoptions.positionalArgs
@@ -180,8 +182,17 @@ export class Subcommand {
         this.name = name;
         this.handler = handler;
         this.description = description;
-        this.optionsoptions = optionsoptions;
         this.defaultCommand = defaultCommand;
+        this.optionsoptions = {
+            namedArgs: Object.fromEntries(Object.entries(optionsoptions.namedArgs).map(([key, value]) => [key, {
+                    description: value.description ?? "No description provided",
+                    required: value.required ?? false,
+                    default: value.default ?? "",
+                    needsValue: value.needsValue ?? true
+                }])),
+            aliases: optionsoptions.aliases,
+            positionalArgs: optionsoptions.positionalArgs ?? []
+        };
     }
     run(options, application) {
         if (application.sourceDirectory == "null")

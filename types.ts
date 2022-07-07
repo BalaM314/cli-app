@@ -6,19 +6,22 @@ export interface Options {
 	};
 	positionalArgs: string[];
 }
-export interface Optionsoptions {
+export interface Optionsoptions<argOpts extends Partial<ArgOptions> | Required<ArgOptions>> {
 	namedArgs: {
-		[option: string]: ArgOptions;
+		[option: string]: argOpts;
 	};
 	aliases?: {
 		[name: string]: string;
 	}
 	positionalArgs: PositionalArgOptions[]
 }
+export type RequiredOptionsoptions = Optionsoptions<Required<ArgOptions>>;
+export type PartialOptionsoptions = Optionsoptions<Partial<ArgOptions>>;
 export interface ArgOptions {
 	description: string;
 	required?: boolean;
 	default?: string;
+	needsValue?: boolean;
 }
 export interface PositionalArgOptions extends ArgOptions {
 	name: string;
