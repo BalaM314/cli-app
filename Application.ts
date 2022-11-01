@@ -1,6 +1,6 @@
 import path from "path";
 import { ApplicationError } from "./classes.js";
-import { CommandHandler, Options, PartialOptionsoptions, RequiredOptionsoptions } from "./types.js";
+import { ArgOptions, CommandHandler, FilledArgOptions, Options, /**PartialOptionsoptions, RequiredOptionsoptions*/ } from "./types.js";
 
 
 
@@ -28,7 +28,13 @@ export class Application {
 		);
 		this.sourceDirectory = "null";
 	}
-	command(name:string, description:string, handler:CommandHandler, isDefault?:boolean, optionsoptions?:PartialOptionsoptions, aliases?:string[]):this {
+	command(name:string, description:string, handler:CommandHandler, isDefault?:boolean, optionsoptions?:Partial<ArgOptions>, aliases?:string[]):this {
+		//Validate positional args
+		let optionalArgsStarted = false;
+		for(let arg of optionsoptions?.positionalArgs ?? []){
+			if(optionalArgsStarted && (arg.required || arg.default)) throw new Error("Required positional arguments, or ones with a default value, cannot follow optional ones.\nThis is an error with the application.")
+			if(!arg.required) optionalArgsStarted = true;
+		}
 		this.commands[name] = new Subcommand(name, handler, description, {
 			namedArgs: optionsoptions?.namedArgs ?? {},
 			positionalArgs: optionsoptions?.positionalArgs ?? [],
@@ -207,46 +213,56 @@ Usage: ${this.name} [command] [options]
 }
 
 export class Subcommand {
-	optionsoptions:RequiredOptionsoptions;
+	optionsoptions:FilledArgOptions;
 	constructor(
 		public name:string,
 		public handler:CommandHandler,
 		public description:string = "No description provided",
-		optionsoptions:PartialOptionsoptions = {namedArgs: {}, positionalArgs: []},
+		optionsoptions:ArgOptions = {namedArgs: {}, positionalArgs: []},
 		public defaultCommand:boolean = false
 	){
 		this.optionsoptions = {
 			namedArgs: Object.fromEntries(Object.entries(optionsoptions.namedArgs).map(([key, value]) => [key, {
 				description: value.description ?? "No description provided",
-				required: value.required ?? false,
-				default: value.default ?? "",
+				required: value.default ? false : value.required ?? false,
+				default: value.default ?? null,
 				needsValue: value.needsValue ?? true
 			}])),
-			aliases: optionsoptions.aliases,
-			positionalArgs: optionsoptions.positionalArgs ?? []
+			aliases: optionsoptions.aliases ?? {},
+			positionalArgs: optionsoptions.positionalArgs.map(a => ({
+				...a,
+				default: a.default ?? null,
+				required: a.default ? false : a.required ?? true,
+			})) ?? []
 		};
 	}
 	run(options:Options, application:Application){
 		if(application.sourceDirectory == "null") throw new Error("application.sourceDirectory is null. Don't call subcommand.run() directly.\nThis is an error with cli-app or the application.");
-		let requiredNamedArgs = Object.entries(this.optionsoptions.namedArgs)
-			.filter(([name, opt]) => opt)
-			.filter(([name, opt]) => opt.required);
-		let requiredPositionalArgs = this.optionsoptions.positionalArgs
-			.filter(arg => arg.required);
-		requiredNamedArgs.forEach(([name, opt]) => {
-			if(!options.namedArgs[name]){
-				if(opt.default){
+		const requiredPositionalArgs = this.optionsoptions.positionalArgs.filter(arg => arg.required);
+		const valuedPositionalArgs = this.optionsoptions.positionalArgs
+			.filter(arg => arg.required || arg.default);
+		Object.entries(this.optionsoptions.namedArgs).forEach(([name, opt]) => {
+			if(!options.namedArgs[name]){//If the named arg was not specified
+				if(opt.default){//If it has a default value, set it to that
 					options.namedArgs[name] = opt.default;
-				} else {
+				} else if(opt.required){//If it's required, throw an error
 					throw new ApplicationError(`No value specified for required named argument "${name}".`);
+				}
+			} else {
+				if(!opt.needsValue){
+					options.namedArgs[name] = options.namedArgs[name] == undefined ? undefined : "true";
 				}
 			}
 		});
-		if(requiredPositionalArgs.length > options.positionalArgs.length){
-			throw new ApplicationError(`Missing required positional arguments.\n(default values for positional args are not yet implemented)`);
-			//TODO the whole positional args thing needs to be fixed.
+		if(options.positionalArgs.length < requiredPositionalArgs.length){
+			throw new ApplicationError(`Not enough positional arguments: minimum ${requiredPositionalArgs.length}, ${options.positionalArgs.length} provided`);
 		}
-		//TODO there are so many issues with checking if args exist.
+		if(options.positionalArgs.length < valuedPositionalArgs.length){
+			for(let i = options.positionalArgs.length; i < valuedPositionalArgs.length; i ++){
+				if(!valuedPositionalArgs[i].default) throw new ApplicationError(`valuedPositionalArgs[${i}].default is not defined. This is an error with cli-app.`);
+				options.positionalArgs[i] = valuedPositionalArgs[i].default!;
+			}
+		}
 		this.handler({
 			positionalArgs: options.positionalArgs,
 			namedArgs: options.namedArgs

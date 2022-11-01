@@ -13,8 +13,13 @@ myApp.command("doStuff", "does stuff", (opts) => {
 	console.log("test command");
 })
 .command("doOtherStuff", "does other stuff", (opts, app) => {
-	console.log(`Did ${opts.positionalArgs[0]} to ${opts.namedArgs["required"]}`);
-	console.log(`default val: ${opts.namedArgs["defaultVal"]}`);
+	console.log(`named arg required: ${opts.namedArgs["required"]}`);
+	console.log(`named arg optional: ${opts.namedArgs["optional"]}`);
+	console.log(`named arg defaultVal: ${opts.namedArgs["defaultVal"]}`);
+	console.log(`named arg noValue: ${opts.namedArgs["noValue"]}`);
+	console.log(`positional arg required: ${opts.positionalArgs[0]}`);
+	console.log(`positional arg defaultVal: ${opts.positionalArgs[1]}`);
+	console.log(`positional arg optional: ${opts.positionalArgs[2]}`);
 }, false, {
 	namedArgs: {
 		required: {
@@ -27,7 +32,6 @@ myApp.command("doStuff", "does stuff", (opts) => {
 		},
 		defaultVal: {
 			description: "this has a default value of SussyAmogus",
-			required: true,
 			default: "sussyAmogus"
 		},
 		noValue: {
@@ -45,9 +49,25 @@ myApp.command("doStuff", "does stuff", (opts) => {
 			required: true
 		},
 		{
+			name: "default",
+			description: "this has a default value of sussyPositionus",
+			default: "sussyPositionus"
+		},
+		{
 			name: "optional",
 			description: "This is not required",
 			required: false
+		},
+	]
+})
+.command("a", "tests default values for positional args", (opts, app) => {
+
+}, false, {
+	positionalArgs: [
+		{
+			name: "arg1",
+			description: "required",
+
 		}
 	]
 });
