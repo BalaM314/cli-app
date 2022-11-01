@@ -46,8 +46,9 @@ export class Application {
 			throw new ApplicationError("application.runHelpCommand was bound incorrectly. This is most likely an error with cli-app.");
 		}
 		if(opts.positionalArgs[0]){
-			let command = this.commands[opts.positionalArgs[0]];
+			let command = this.commands[opts.positionalArgs[0]] ?? this.commands[this.aliases[opts.positionalArgs[0]]];
 			if(command){
+				const aliases = Object.entries(this.aliases).filter(([alias, name]) => name == opts.positionalArgs[0]).map(([alias, name]) => alias);
 				console.log(
 `Help for command ${command.name}:
 
@@ -74,6 +75,8 @@ ${
 		`${opt.required ? `<${opt.name}>` : `<${opt.name}>`}: ${opt.description}`
 	).join("\n")
 }
+
+${aliases.length != 0 ? `Aliases: ${aliases.join(", ")}` : ""}
 `
 				);
 			} else {

@@ -59,7 +59,7 @@ myApp.command("doStuff", "does stuff", (opts) => {
 			required: false
 		},
 	]
-})
+}, ["alias1", "alias2", "alias3"])
 .command("a", "tests default values for positional args", (opts, app) => {
 
 }, false, {
