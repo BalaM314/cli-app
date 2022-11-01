@@ -31,6 +31,8 @@ export interface NamedArgOptions {
 	default?: string | null;
 	/**Whether this argument accepts a value. Default: true. */
 	needsValue?: boolean;
+	/**List of aliases for this named arg. */
+	aliases?: string[];
 }
 export interface PositionalArgOptions {
 	name: string;

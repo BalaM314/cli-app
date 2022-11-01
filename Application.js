@@ -195,7 +195,10 @@ export class Subcommand {
                     default: value.default ?? null,
                     needsValue: value.needsValue ?? true
                 }])),
-            aliases: argOptions.aliases ?? {},
+            aliases: Object.fromEntries([
+                ...Object.entries(argOptions.aliases ?? []),
+                ...([].concat(...Object.entries(argOptions.namedArgs).map(([name, opts]) => opts.aliases?.map(alias => [alias, name]) ?? [])))
+            ]),
             positionalArgs: argOptions.positionalArgs.map(a => ({
                 ...a,
                 default: a.default ?? null,
