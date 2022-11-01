@@ -35,9 +35,10 @@ export class Application {
             throw new ApplicationError("application.runHelpCommand was bound incorrectly. This is most likely an error with cli-app.");
         }
         if (opts.positionalArgs[0]) {
-            let command = this.commands[opts.positionalArgs[0]] ?? this.commands[this.aliases[opts.positionalArgs[0]]];
+            let commandName = this.commands[opts.positionalArgs[0]] ? opts.positionalArgs[0] : this.aliases[opts.positionalArgs[0]] ?? opts.positionalArgs[0];
+            let command = this.commands[commandName];
             if (command) {
-                const aliases = Object.entries(this.aliases).filter(([alias, name]) => name == opts.positionalArgs[0]).map(([alias, name]) => alias);
+                const aliases = Object.entries(this.aliases).filter(([alias, name]) => name == commandName).map(([alias, name]) => alias);
                 const positionalArgsFragment = command.argOptions.positionalArgs.map(opt => opt.required ? `<${opt.name}> ` : `[<${opt.name}>] `).join("");
                 const namedArgsFragment = Object.entries(command.argOptions.namedArgs)
                     .map(([name, opt]) => opt.required ? `--${name}${opt.needsValue ? ` <${name}>` : ``}` : `[--${name}${opt.needsValue ? ` <${name}>` : ``}]`).join(" ");
