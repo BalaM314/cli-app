@@ -120,30 +120,28 @@ Usage: ${this.name} [command] [options]
 	 * @param providedArgs Pass process.argv without modifying it.
 	 * @returns Formatted args.
 	 */
-	static parseArgs(
-		providedArgs: string[]
-	): Options {
+	static parseArgs(providedArgs:string[]):Options {
 		let parameters: {
 			[index: string]: string | null;
 		} = {};
-		let commands: string[] = [];
+		let commands:string[] = [];
 		let i = 0;
 		if(!providedArgs[0]?.includes("node")){
 			throw new ApplicationError("Attempted to parse invalid args. Unless you are running this application in a strange way, this is likely an error with the application itself.");
 		}
 		let args = providedArgs.slice(2);
-		while (true) {
+		while(true){
 			i++;
-			if (i > 1000) {
+			if(i > 1000){
 				throw new ApplicationError("Too many arguments!");
 			}
 			let arg = args.splice(0, 1)[0];
-			if (arg == undefined) break;
-			if (arg.startsWith("--")) {
-				if (args[0]?.startsWith("-")) parameters[arg.substring(2)] = null;
+			if(arg == undefined) break;
+			if(arg.startsWith("--")){
+				if(args[0]?.startsWith("-")) parameters[arg.substring(2)] = null;
 				else parameters[arg.substring(2)] = args.splice(0, 1)[0] ?? null;
-			} else if (arg.startsWith("-")) {
-				if (args[0]?.startsWith("-")) parameters[arg.substring(1)] = null;
+			} else if(arg.startsWith("-")){
+				if(args[0]?.startsWith("-")) parameters[arg.substring(1)] = null;
 				else parameters[arg.substring(1)] = args.splice(0, 1)[0] ?? null;
 			} else {
 				commands.push(arg);
@@ -154,9 +152,7 @@ Usage: ${this.name} [command] [options]
 			namedArgs: parameters
 		};
 	}
-	run(args:string[], options?:{
-		throwOnError?:boolean
-	}){
+	run(args:string[], options?:{ throwOnError?:boolean }){
 		this.sourceDirectory = path.join(process.argv[1], "..");
 		let parsedArgs = Application.parseArgs(args);
 		let command:Subcommand | undefined;

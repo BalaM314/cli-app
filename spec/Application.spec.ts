@@ -1,6 +1,6 @@
 import path from "path";
-import { Application } from "../Application.js";
-import { ApplicationError } from "../classes.js";
+import { Application } from "../src/Application.js";
+import { ApplicationError } from "../src/classes.js";
 
 describe("Application", () => {
 	it("should run an application without crashing", () => {
