@@ -1,5 +1,5 @@
 import path from "path";
-import { ApplicationError } from "./classes.js";
+import { ApplicationError, StringBuilder } from "./classes.js";
 import { ArgOptions, CommandHandler, FilledArgOptions, Options } from "./types.js";
 
 
@@ -49,36 +49,43 @@ export class Application {
 			let command = this.commands[opts.positionalArgs[0]] ?? this.commands[this.aliases[opts.positionalArgs[0]]];
 			if(command){
 				const aliases = Object.entries(this.aliases).filter(([alias, name]) => name == opts.positionalArgs[0]).map(([alias, name]) => alias);
-				console.log(
-`Help for command ${command.name}:
+				const positionalArgsFragment =
+					command.argOptions.positionalArgs.map(opt => 
+						opt.required ? `<${opt.name}> ` : `[<${opt.name}>] `
+					).join("");
+				const namedArgsFragment =
+					Object.entries(command.argOptions.namedArgs)
+						.map(([name, opt]) => 
+							opt.required ? `--${name}${opt.needsValue ? ` <${name}>` : ``}` : `[--${name}${opt.needsValue ? ` <${name}>` : ``}]`
+						).join(" ");
+				const outputText = new StringBuilder()
+				.addLine()
+				.addLine(`Help for command ${command.name}:`)
 
-Usage: ${this.name} ${command.name} ${
-	Object.entries(command.argOptions.namedArgs)
-	.map(([name, opt]) => 
-	//Template literals make stuff easier to read right?
-		opt.required ? `--${name}${opt.needsValue ? ` <${name}> ` : ``}` : `[--${name}${opt.needsValue ? ` <${name}> ` : ``}] `
-	).join("")
-}${
-	command.argOptions.positionalArgs.map(opt => 
-		opt.required ? `<${opt.name}> ` : `[<${opt.name}>] `
-	).join("")
-}
-${
-	Object.entries(command.argOptions.namedArgs)
-	.map(([name, opt]) => 
-		`${opt.required ? `<${name}>` : `<${name}>`}: ${opt.description}`
-	).join("\n")
-}
-${
-	command.argOptions.positionalArgs
-	.map((opt) => 
-		`${opt.required ? `<${opt.name}>` : `<${opt.name}>`}: ${opt.description}`
-	).join("\n")
-}
+				.add(`Usage: ${this.name} ${command.name}`)
+				.addWord(positionalArgsFragment)
+				.addWord(namedArgsFragment)
+				.add("\n")
+				.addLine();
 
-${aliases.length != 0 ? `Aliases: ${aliases.join(", ")}` : ""}
-`
-				);
+				if(Object.entries(command.argOptions.namedArgs).length != 0){
+					Object.entries(command.argOptions.namedArgs)
+					.map(([name, opt]) => 
+					`<${name}>: ${opt.description}`
+					).forEach(line => outputText.addLine(line));
+					outputText.addLine();
+				}
+
+				if(command.argOptions.positionalArgs.length != 0){
+					command.argOptions.positionalArgs
+					.map((opt) => 
+					`<${opt.name}>: ${opt.description}`
+					).forEach(line => outputText.addLine(line));
+					outputText.addLine();
+				}
+
+				outputText.addLine(aliases.length != 0, `Aliases: ${aliases.join(", ")}`);
+				process.stdout.write(outputText.text());
 			} else {
 				console.log(`Unknown command ${opts.positionalArgs[0]}. Run ${this.name} help for a list of all commands.`);
 			}
