@@ -1,4 +1,4 @@
-import { Application } from "./Application.js";
+import { Application } from "../src/index.js";
 let myApp = new Application("test-app", "A test application for testing cli-app.");
 myApp.command("doStuff", "does stuff", (opts) => {
     if (opts.namedArgs["sus"]) {
