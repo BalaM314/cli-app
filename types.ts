@@ -23,8 +23,6 @@ export type RequiredRecursive<T> = {
 
 
 export type FilledArgOptions = RequiredRecursive<ArgOptions>;
-//export type RequiredOptionsoptions = Optionsoptions<Required<ArgOptions>>;
-//export type PartialOptionsoptions = Optionsoptions<Partial<ArgOptions>>;
 export interface NamedArgOptions {
 	description: string;
 	/**Whether the argument must be specified by the command invoker. Default: false. */

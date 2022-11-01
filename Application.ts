@@ -28,11 +28,11 @@ export class Application {
 		);
 		this.sourceDirectory = "null";
 	}
-	command(name:string, description:string, handler:CommandHandler, isDefault?:boolean, optionsoptions?:Partial<ArgOptions>, aliases?:string[]):this {
+	command(name:string, description:string, handler:CommandHandler, isDefault?:boolean, argOptions?:Partial<ArgOptions>, aliases?:string[]):this {
 		this.commands[name] = new Subcommand(name, handler, description, {
-			namedArgs: optionsoptions?.namedArgs ?? {},
-			positionalArgs: optionsoptions?.positionalArgs ?? [],
-			aliases: optionsoptions?.aliases ?? {}
+			namedArgs: argOptions?.namedArgs ?? {},
+			positionalArgs: argOptions?.positionalArgs ?? [],
+			aliases: argOptions?.aliases ?? {}
 		}, isDefault);
 		if(aliases) aliases.forEach((alias) => this.alias(alias, name));
 		return this;//For daisy chaining
@@ -52,24 +52,24 @@ export class Application {
 `Help for command ${command.name}:
 
 Usage: ${this.name} ${command.name} ${
-	Object.entries(command.optionsoptions.namedArgs)
+	Object.entries(command.argOptions.namedArgs)
 	.map(([name, opt]) => 
 	//Template literals make stuff easier to read right?
 		opt.required ? `--${name}${opt.needsValue ? ` <${name}> ` : ``}` : `[--${name}${opt.needsValue ? ` <${name}> ` : ``}] `
 	).join("")
 }${
-	command.optionsoptions.positionalArgs.map(opt => 
+	command.argOptions.positionalArgs.map(opt => 
 		opt.required ? `<${opt.name}> ` : `[<${opt.name}>] `
 	).join("")
 }
 ${
-	Object.entries(command.optionsoptions.namedArgs)
+	Object.entries(command.argOptions.namedArgs)
 	.map(([name, opt]) => 
 		`${opt.required ? `<${name}>` : `<${name}>`}: ${opt.description}`
 	).join("\n")
 }
 ${
-	command.optionsoptions.positionalArgs
+	command.argOptions.positionalArgs
 	.map((opt) => 
 		`${opt.required ? `<${opt.name}>` : `<${opt.name}>`}: ${opt.description}`
 	).join("\n")
@@ -177,7 +177,7 @@ Usage: ${this.name} [command] [options]
 			//Loop through each named argument passed
 			Object.keys(parsedArgs.namedArgs).forEach(arg => 
 				//If the arg is not in the named arguments or the aliases
-				(arg in command!.optionsoptions.namedArgs || arg in (command!.optionsoptions.aliases ?? {})) ? "" :
+				(arg in command!.argOptions.namedArgs || arg in (command!.argOptions.aliases ?? {})) ? "" :
 					//Display a warning
 					console.warn(`Unknown argument ${arg}`)
 			);
@@ -188,7 +188,7 @@ Usage: ${this.name} [command] [options]
 						...Object.fromEntries(
 							Object.entries(parsedArgs.namedArgs)
 							.map(([name, value]) => 
-								[command?.optionsoptions.aliases?.[name] ?? name, value]
+								[command?.argOptions.aliases?.[name] ?? name, value]
 							)
 						)
 					},
@@ -210,23 +210,23 @@ Usage: ${this.name} [command] [options]
 }
 
 export class Subcommand {
-	optionsoptions:FilledArgOptions;
+	argOptions:FilledArgOptions;
 	constructor(
 		public name:string,
 		public handler:CommandHandler,
 		public description:string = "No description provided",
-		optionsoptions:ArgOptions = {namedArgs: {}, positionalArgs: []},
+		argOptions:ArgOptions = {namedArgs: {}, positionalArgs: []},
 		public defaultCommand:boolean = false
 	){
-		this.optionsoptions = {
-			namedArgs: Object.fromEntries(Object.entries(optionsoptions.namedArgs).map(([key, value]) => [key, {
+		this.argOptions = {
+			namedArgs: Object.fromEntries(Object.entries(argOptions.namedArgs).map(([key, value]) => [key, {
 				description: value.description ?? "No description provided",
 				required: value.default ? false : value.required ?? false,
 				default: value.default ?? null,
 				needsValue: value.needsValue ?? true
 			}])),
-			aliases: optionsoptions.aliases ?? {},
-			positionalArgs: optionsoptions.positionalArgs.map(a => ({
+			aliases: argOptions.aliases ?? {},
+			positionalArgs: argOptions.positionalArgs.map(a => ({
 				...a,
 				default: a.default ?? null,
 				required: a.default ? false : a.required ?? true,
@@ -234,17 +234,17 @@ export class Subcommand {
 		};
 		//Validate positional args
 		let optionalArgsStarted = false;
-		for(let arg of this.optionsoptions.positionalArgs){
-			if(optionalArgsStarted && (arg.required || arg.default)) throw new Error("Required positional arguments, or ones with a default value, cannot follow optional ones.\nThis is an error with the application.")
+		for(let arg of this.argOptions.positionalArgs){
+			if(optionalArgsStarted && (arg.required || arg.default)) throw new Error("Required positional arguments, or ones with a default value, cannot follow optional ones.\nThis is an error with the application.");
 			if(!(arg.required || arg.default)) optionalArgsStarted = true;
 		}
 	}
 	run(options:Options, application:Application){
 		if(application.sourceDirectory == "null") throw new Error("application.sourceDirectory is null. Don't call subcommand.run() directly.\nThis is an error with cli-app or the application.");
-		const requiredPositionalArgs = this.optionsoptions.positionalArgs.filter(arg => arg.required);
-		const valuedPositionalArgs = this.optionsoptions.positionalArgs
+		const requiredPositionalArgs = this.argOptions.positionalArgs.filter(arg => arg.required);
+		const valuedPositionalArgs = this.argOptions.positionalArgs
 			.filter(arg => arg.required || arg.default);
-		Object.entries(this.optionsoptions.namedArgs).forEach(([name, opt]) => {
+		Object.entries(this.argOptions.namedArgs).forEach(([name, opt]) => {
 			if(!options.namedArgs[name]){//If the named arg was not specified
 				if(opt.default){//If it has a default value, set it to that
 					options.namedArgs[name] = opt.default;
