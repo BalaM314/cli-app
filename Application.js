@@ -17,14 +17,6 @@ export class Application {
         this.sourceDirectory = "null";
     }
     command(name, description, handler, isDefault, optionsoptions, aliases) {
-        //Validate positional args
-        let optionalArgsStarted = false;
-        for (let arg of optionsoptions?.positionalArgs ?? []) {
-            if (optionalArgsStarted && (arg.required || arg.default))
-                throw new Error("Required positional arguments, or ones with a default value, cannot follow optional ones.\nThis is an error with the application.");
-            if (!arg.required)
-                optionalArgsStarted = true;
-        }
         this.commands[name] = new Subcommand(name, handler, description, {
             namedArgs: optionsoptions?.namedArgs ?? {},
             positionalArgs: optionsoptions?.positionalArgs ?? [],
@@ -119,15 +111,15 @@ Usage: ${this.name} [command] [options]
                 break;
             if (arg.startsWith("--")) {
                 if (args[0]?.startsWith("-"))
-                    parameters[arg.substring(2)] = "null";
+                    parameters[arg.substring(2)] = null;
                 else
-                    parameters[arg.substring(2)] = args.splice(0, 1)[0] ?? "null";
+                    parameters[arg.substring(2)] = args.splice(0, 1)[0] ?? null;
             }
             else if (arg.startsWith("-")) {
                 if (args[0]?.startsWith("-"))
-                    parameters[arg.substring(1)] = "null";
+                    parameters[arg.substring(1)] = null;
                 else
-                    parameters[arg.substring(1)] = args.splice(0, 1)[0] ?? "null";
+                    parameters[arg.substring(1)] = args.splice(0, 1)[0] ?? null;
             }
             else {
                 commands.push(arg);
@@ -138,7 +130,7 @@ Usage: ${this.name} [command] [options]
             namedArgs: parameters
         };
     }
-    run(args) {
+    run(args, options) {
         this.sourceDirectory = path.join(process.argv[1], "..");
         let parsedArgs = Application.parseArgs(args);
         let command;
@@ -174,6 +166,8 @@ Usage: ${this.name} [command] [options]
                 }, this);
             }
             catch (err) {
+                if (options?.throwOnError)
+                    throw err;
                 if (err instanceof ApplicationError) {
                     console.error(`Error: ${err.message}`);
                 }
@@ -208,6 +202,14 @@ export class Subcommand {
                 required: a.default ? false : a.required ?? true,
             })) ?? []
         };
+        //Validate positional args
+        let optionalArgsStarted = false;
+        for (let arg of this.optionsoptions.positionalArgs) {
+            if (optionalArgsStarted && (arg.required || arg.default))
+                throw new Error("Required positional arguments, or ones with a default value, cannot follow optional ones.\nThis is an error with the application.");
+            if (!(arg.required || arg.default))
+                optionalArgsStarted = true;
+        }
     }
     run(options, application) {
         if (application.sourceDirectory == "null")
@@ -231,7 +233,8 @@ export class Subcommand {
             }
         });
         if (options.positionalArgs.length < requiredPositionalArgs.length) {
-            throw new ApplicationError(`Not enough positional arguments: minimum ${requiredPositionalArgs.length}, ${options.positionalArgs.length} provided`);
+            const missingPositionalArgs = requiredPositionalArgs.slice(options.positionalArgs.length).map(arg => arg.name);
+            throw new ApplicationError(`Missing required positional argument${missingPositionalArgs.length == 1 ? "" : "s"} "${missingPositionalArgs.join(", ")}"`);
         }
         if (options.positionalArgs.length < valuedPositionalArgs.length) {
             for (let i = options.positionalArgs.length; i < valuedPositionalArgs.length; i++) {

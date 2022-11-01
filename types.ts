@@ -2,7 +2,7 @@ import { Application } from "./Application";
 
 export interface Options {
 	namedArgs: {
-		[name: string]: string | undefined;
+		[name: string]: string | undefined | null;
 	};
 	positionalArgs: string[];
 }
