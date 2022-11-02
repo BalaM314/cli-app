@@ -176,7 +176,8 @@ Usage: ${this.name} [command] [options]
                         ...Object.fromEntries(Object.entries(parsedArgs.namedArgs)
                             .map(([name, value]) => [command?.argOptions.aliases?.[name] ?? name, value]))
                     },
-                    positionalArgs: positionalArgs
+                    positionalArgs: positionalArgs,
+                    commandName: command.name
                 }, this);
             }
             catch (err) {

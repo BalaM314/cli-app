@@ -5,6 +5,7 @@ export interface Options {
 		[name: string]: string | undefined | null;
 	};
 	positionalArgs: string[];
+	commandName: string;
 }
 export interface ArgOptions {
 	namedArgs: {

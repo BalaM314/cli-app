@@ -131,7 +131,7 @@ Usage: ${this.name} [command] [options]
 	 * @param providedArgs Pass process.argv without modifying it.
 	 * @returns Formatted args.
 	 */
-	static parseArgs(providedArgs:string[]):Options {
+	static parseArgs(providedArgs:string[]):Omit<Options, "commandName"> {
 		let parameters: {
 			[index: string]: string | null;
 		} = {};
@@ -199,7 +199,8 @@ Usage: ${this.name} [command] [options]
 							)
 						)
 					},
-					positionalArgs: positionalArgs
+					positionalArgs: positionalArgs,
+					commandName: command.name
 				}, this);
 			} catch(err){
 				if(options?.throwOnError) throw err;
