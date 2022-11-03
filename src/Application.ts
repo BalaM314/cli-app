@@ -281,8 +281,7 @@ export class Subcommand {
 			}
 		}
 		this.handler({
-			positionalArgs: options.positionalArgs,
-			namedArgs: options.namedArgs
+			...options
 		}, application);
 	}
 }
