@@ -175,10 +175,10 @@ Usage: ${this.name} [command] [options]
 			command = this.commands["help"]!;
 		} else if(this.commands[parsedArgs.positionalArgs[0]]){
 			command = this.commands[parsedArgs.positionalArgs[0]];
-			positionalArgs.splice(0,1);
+			positionalArgs.shift();
 		} else if(this.aliases[parsedArgs.positionalArgs[0]]){
 			command = this.commands[this.aliases[parsedArgs.positionalArgs[0]]];
-			positionalArgs.splice(0,1);
+			positionalArgs.shift();
 		} else {
 			command = Object.values(this.commands).filter(command => command?.defaultCommand)[0] ?? this.commands["help"]!;
 		}
