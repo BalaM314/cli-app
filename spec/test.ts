@@ -1,4 +1,4 @@
-import { Application } from "../src/index.js";
+import { Application, Script } from "../src/index.js";
 
 
 
@@ -72,5 +72,16 @@ myApp.command("doStuff", "does stuff", (opts) => {
 	]
 });
 
+const script = new Script("test-script", "A testing script", (opts, app) => {
+	console.log(opts.namedArgs.named1);
+}, {
+	namedArgs: {
+		named1: {
+			required: true,
+			description: "test arg",
+		}
+	}
+});
 
-myApp.run(process.argv);
+// myApp.run(process.argv);
+script.run(process.argv);

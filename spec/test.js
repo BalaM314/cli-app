@@ -1,4 +1,4 @@
-import { Application } from "../src/index.js";
+import { Application, Script } from "../src/index.js";
 let myApp = new Application("test-app", "A test application for testing cli-app.");
 myApp.command("doStuff", "does stuff", (opts) => {
     if (opts.namedArgs["sus"]) {
@@ -66,4 +66,15 @@ myApp.command("doStuff", "does stuff", (opts) => {
         }
     ]
 });
-myApp.run(process.argv);
+const script = new Script("test-script", "A testing script", (opts, app) => {
+    console.log(opts.namedArgs.named1);
+}, {
+    namedArgs: {
+        named1: {
+            required: true,
+            description: "test arg",
+        }
+    }
+});
+// myApp.run(process.argv);
+script.run(process.argv);
