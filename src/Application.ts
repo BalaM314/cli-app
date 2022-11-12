@@ -6,7 +6,7 @@ import { ArgOptions, CommandHandler, FilledArgOptions, Options } from "./types.j
 
 export class Application {
 	commands: {
-		[name: string]: Subcommand | undefined
+		[name: string]: Subcommand<ArgOptions> | undefined
 	} = {};
 	aliases: {
 		[index:string]:string;
@@ -28,8 +28,8 @@ export class Application {
 		);
 		this.sourceDirectory = "null";
 	}
-	command(name:string, description:string, handler:CommandHandler, isDefault?:boolean, argOptions?:Partial<ArgOptions>, aliases?:string[]):this {
-		this.commands[name] = new Subcommand(name, handler, description, {
+	command<A extends Partial<ArgOptions>>(name:string, description:string, handler:CommandHandler<A>, isDefault?:boolean, argOptions?:A, aliases?:string[]):this {
+		this.commands[name] = new Subcommand<A>(name, handler, description, {
 			namedArgs: argOptions?.namedArgs ?? {},
 			positionalArgs: argOptions?.positionalArgs ?? [],
 			aliases: argOptions?.aliases ?? {}
@@ -41,7 +41,14 @@ export class Application {
 		this.aliases[name] = target;
 		return this;
 	}
-	runHelpCommand(opts:Options):number {
+	runHelpCommand(opts:Options<{
+		positionalArgs: [{
+			name: "command",
+			description: "The command to get help on.",
+			required: false
+		}],
+		namedArgs: {}
+	}>):number {
 		if(!(this instanceof Application)){
 			throw new ApplicationError("application.runHelpCommand was bound incorrectly. This is most likely an error with cli-app.");
 		}
@@ -131,7 +138,7 @@ Usage: ${this.name} [command] [options]
 	 * @param providedArgs Pass process.argv without modifying it.
 	 * @returns Formatted args.
 	 */
-	static parseArgs(providedArgs:string[]):Omit<Options, "commandName"> {
+	static parseArgs(providedArgs:string[]):Omit<Options<ArgOptions>, "commandName"> {
 		let parameters: {
 			[index: string]: string | null;
 		} = {};
@@ -166,7 +173,7 @@ Usage: ${this.name} [command] [options]
 	run(args:string[], options?:{ throwOnError?:boolean }){
 		this.sourceDirectory = path.join(process.argv[1], "..");
 		let parsedArgs = Application.parseArgs(args);
-		let command:Subcommand | undefined;
+		let command:Subcommand<ArgOptions> | undefined;
 		let { positionalArgs } = parsedArgs;
 		if("help" in parsedArgs.namedArgs){
 			command = this.commands["help"]!;
@@ -217,11 +224,11 @@ Usage: ${this.name} [command] [options]
 	}
 }
 
-export class Subcommand {
+export class Subcommand<A extends Partial<ArgOptions>> {
 	argOptions:FilledArgOptions;
 	constructor(
 		public name:string,
-		public handler:CommandHandler,
+		public handler:CommandHandler<A>,
 		public description:string = "No description provided",
 		argOptions:ArgOptions = {namedArgs: {}, positionalArgs: []},
 		public defaultCommand:boolean = false
@@ -252,7 +259,7 @@ export class Subcommand {
 			if(!(arg.required || arg.default)) optionalArgsStarted = true;
 		}
 	}
-	run(options:Options, application:Application){
+	run(options:Options<ArgOptions>, application:Application){
 		if(application.sourceDirectory == "null") throw new Error("application.sourceDirectory is null. Don't call subcommand.run() directly.\nThis is an error with cli-app or the application.");
 		const requiredPositionalArgs = this.argOptions.positionalArgs.filter(arg => arg.required);
 		const valuedPositionalArgs = this.argOptions.positionalArgs

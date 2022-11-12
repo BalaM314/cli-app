@@ -4,11 +4,11 @@ import { Application } from "../src/index.js";
 
 let myApp = new Application("test-app", "A test application for testing cli-app.");
 myApp.command("doStuff", "does stuff", (opts) => {
-	if(opts.namedArgs["sus"]){
+	if((opts.namedArgs as any)["sus"]){
 		process.stdout.write("sussy ");
 	}
-	if(opts.namedArgs["option"]){
-		console.log(`Option: "${opts.namedArgs["option"]}"`);
+	if((opts.namedArgs as any)["option"]){
+		console.log(`Option: "${(opts.namedArgs as any)["option"]}"`);
 	}
 	console.log("test command");
 })
