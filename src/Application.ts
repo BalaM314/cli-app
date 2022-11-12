@@ -1,12 +1,13 @@
 import path from "path";
 import { ApplicationError, StringBuilder } from "./classes.js";
+import { Script } from "./Script.js";
 import { ArgOptions, CommandHandler, FilledArgOptions, Options } from "./types.js";
 
 
 
 export class Application {
 	commands: {
-		[name: string]: Subcommand<ArgOptions> | undefined
+		[name: string]: Subcommand<Application, ArgOptions> | undefined
 	} = {};
 	aliases: {
 		[index:string]:string;
@@ -28,8 +29,8 @@ export class Application {
 		);
 		this.sourceDirectory = "null";
 	}
-	command<A extends Partial<ArgOptions>>(name:string, description:string, handler:CommandHandler<A>, isDefault?:boolean, argOptions?:A, aliases?:string[]):this {
-		this.commands[name] = new Subcommand<A>(name, handler, description, {
+	command<A extends Partial<ArgOptions>>(name:string, description:string, handler:CommandHandler<Application, A>, isDefault?:boolean, argOptions?:A, aliases?:string[]):this {
+		this.commands[name] = new Subcommand<Application, A>(name, handler, description, {
 			namedArgs: argOptions?.namedArgs ?? {},
 			positionalArgs: argOptions?.positionalArgs ?? [],
 			aliases: argOptions?.aliases ?? {}
@@ -176,7 +177,7 @@ Usage: ${this.name} [command] [options]
 	run(args:string[], options?:{ throwOnError?:boolean }){
 		this.sourceDirectory = path.join(process.argv[1], "..");
 		let parsedArgs = Application.parseArgs(args);
-		let command:Subcommand<ArgOptions> | undefined;
+		let command:Subcommand<Application, ArgOptions> | undefined;
 		let { positionalArgs } = parsedArgs;
 		if("help" in parsedArgs.namedArgs){
 			command = this.commands["help"]!;
@@ -227,11 +228,11 @@ Usage: ${this.name} [command] [options]
 	}
 }
 
-export class Subcommand<A extends Partial<ArgOptions>> {
+export class Subcommand<App extends Application | Script<ArgOptions>, A extends Partial<ArgOptions>> {
 	argOptions:FilledArgOptions;
 	constructor(
 		public name:string,
-		public handler:CommandHandler<A>,
+		public handler:CommandHandler<App, A>,
 		public description:string = "No description provided",
 		argOptions:ArgOptions = {namedArgs: {}, positionalArgs: []},
 		public defaultCommand:boolean = false
@@ -262,7 +263,7 @@ export class Subcommand<A extends Partial<ArgOptions>> {
 			if(!(arg.required || arg.default)) optionalArgsStarted = true;
 		}
 	}
-	run(options:Options<ArgOptions>, application:Application){
+	run(options:Options<ArgOptions>, application:App){
 		if(application.sourceDirectory == "null") throw new Error("application.sourceDirectory is null. Don't call subcommand.run() directly.\nThis is an error with cli-app or the application.");
 		const requiredPositionalArgs = this.argOptions.positionalArgs.filter(arg => arg.required);
 		const valuedPositionalArgs = this.argOptions.positionalArgs
@@ -292,7 +293,7 @@ export class Subcommand<A extends Partial<ArgOptions>> {
 		}
 		this.handler({
 			...options
-		}, application);
+		}, application as never);
 	}
 }
 

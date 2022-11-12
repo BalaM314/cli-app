@@ -1,4 +1,5 @@
 import { Application } from "./Application";
+import { Script } from "./Script";
 
 export interface Options<Opts extends Partial<ArgOptions>> {
 	namedArgs: Opts["namedArgs"] extends ArgOptions["namedArgs"] ? namedArgs<Opts["namedArgs"]> : {};
@@ -53,4 +54,4 @@ export interface PositionalArgOptions {
 	/**A default value for the argument. */
 	default?: string | null;
 }
-export type CommandHandler<A extends Partial<ArgOptions>> = (opts:Options<A>, application:Application) => number | void;
+export type CommandHandler<App extends Application | Script<ArgOptions>, A extends Partial<ArgOptions>> = (opts:Options<A>, application:Application) => number | void;
