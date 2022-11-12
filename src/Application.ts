@@ -1,7 +1,7 @@
 import path from "path";
 import { ApplicationError, StringBuilder } from "./classes.js";
-import { Script } from "./Script.js";
-import { ArgOptions, CommandHandler, FilledArgOptions, Options } from "./types.js";
+import type { Script } from "./Script.js";
+import type { ArgOptions, CommandHandler, FilledArgOptions, Options } from "./types.js";
 
 
 
@@ -286,7 +286,7 @@ export class Subcommand<App extends Application | Script<ArgOptions>, A extends 
 			throw new ApplicationError(`Missing required positional argument${missingPositionalArgs.length == 1 ? "" : "s"} "${missingPositionalArgs.join(", ")}"`);
 		}
 		if(options.positionalArgs.length > this.argOptions.positionalArgs.length){
-			throw new ApplicationError(`Warning: Too many positional arguments (required ${this.argOptions.positionalArgs.length}, provided ${options.positionalArgs.length})"`);
+			console.warn(`Warning: Too many positional arguments (required ${this.argOptions.positionalArgs.length}, provided ${options.positionalArgs.length})"`);
 		}
 		if(options.positionalArgs.length < valuedPositionalArgs.length){
 			for(let i = options.positionalArgs.length; i < valuedPositionalArgs.length; i ++){
