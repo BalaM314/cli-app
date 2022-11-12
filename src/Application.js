@@ -39,7 +39,7 @@ export class Application {
             let command = this.commands[commandName];
             if (command) {
                 const aliases = Object.entries(this.aliases).filter(([alias, name]) => name == commandName).map(([alias, name]) => alias);
-                const positionalArgsFragment = command.argOptions.positionalArgs.map(opt => opt.required ? `<${opt.name}> ` : `[<${opt.name}>] `).join("");
+                const positionalArgsFragment = command.argOptions.positionalArgs.map(opt => opt.required ? `<${opt.name}>` : `[<${opt.name}>]`).join(" ");
                 const namedArgsFragment = Object.entries(command.argOptions.namedArgs)
                     .map(([name, opt]) => opt.required ? `--${name}${opt.needsValue ? ` <${name}>` : ``}` : `[--${name}${opt.needsValue ? ` <${name}>` : ``}]`).join(" ");
                 const outputText = new StringBuilder()

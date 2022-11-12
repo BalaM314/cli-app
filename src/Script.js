@@ -21,9 +21,9 @@ export class Script {
         }, true);
     }
     runHelpCommand(opts) {
-        const positionalArgsFragment = this.defaultCommand.argOptions.positionalArgs.map(opt => opt.required ? `<${opt.name}> ` : `[<${opt.name}>] `).join("");
+        const positionalArgsFragment = this.defaultCommand.argOptions.positionalArgs.map(opt => opt.required ? `<${opt.name}>` : `[<${opt.name}>]`).join(" ");
         const namedArgsFragment = Object.entries(this.defaultCommand.argOptions.namedArgs)
-            .map(([name, opt]) => opt.required ? `--${name}${opt.needsValue ? ` <${name}>` : ``}` : `[--${name}${opt.needsValue ? ` <${name}>` : ``}]`).join(" ");
+            .map(([name, opt]) => opt.required ? `--${name}${opt.needsValue ? ` <${name}>` : ""}` : `[--${name}${opt.needsValue ? ` <${name}>` : ``}]`).join(" ");
         const outputText = new StringBuilder()
             .addLine()
             .addLine(`Help for ${this.name}:`)
