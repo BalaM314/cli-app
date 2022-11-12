@@ -208,13 +208,13 @@ describe("Application.parseArgs", () => {
 	});
 	it("should return empty args if application run with no args", () => {
 		expect(Application.parseArgs(runWith([]))).toEqual({
-			namedArgs: [],
+			namedArgs: {},
 			positionalArgs: [],
 		});
 	});
 	it("should parse positional args", () => {
 		expect(Application.parseArgs(runWith(["sussy", "baka"]))).toEqual({
-			namedArgs: [],
+			namedArgs: {},
 			positionalArgs: ["sussy", "baka"],
 		});
 	});

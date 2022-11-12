@@ -177,3 +177,82 @@ describe("Application", () => {
         expect(app.commands["cmd1"].handler).toHaveBeenCalled();
     });
 });
+describe("Application.parseArgs", () => {
+    function runWith(args, programName = "sus.js") {
+        return ["node", programName, ...args];
+    }
+    it("should crash on no args", () => {
+        expect(() => Application.parseArgs([])).toThrow();
+    });
+    it("should return empty args if application run with no args", () => {
+        expect(Application.parseArgs(runWith([]))).toEqual({
+            namedArgs: {},
+            positionalArgs: [],
+        });
+    });
+    it("should parse positional args", () => {
+        expect(Application.parseArgs(runWith(["sussy", "baka"]))).toEqual({
+            namedArgs: {},
+            positionalArgs: ["sussy", "baka"],
+        });
+    });
+    it("should parse named args", () => {
+        expect(Application.parseArgs(runWith(["--sussy", "baka", "--amogus", "sus"]))).toEqual({
+            namedArgs: {
+                sussy: "baka",
+                amogus: "sus",
+            },
+            positionalArgs: [],
+        });
+    });
+    it("should set named args to null if a value is not specified", () => {
+        expect(Application.parseArgs(runWith(["--sussy", "baka", "--amogus", "--amoma"]))).toEqual({
+            namedArgs: {
+                sussy: "baka",
+                amogus: null,
+                amoma: null,
+            },
+            positionalArgs: [],
+        });
+    });
+    it("should parse named args and positional args", () => {
+        expect(Application.parseArgs(runWith(["sus", "--sussy", "baka", "amogus", "--amoma"]))).toEqual({
+            namedArgs: {
+                sussy: "baka",
+                amoma: null,
+            },
+            positionalArgs: ["sus", "amogus"],
+        });
+    });
+    it("should correctly handle valuelessOptions", () => {
+        expect(Application.parseArgs(runWith(["--sus", "--sussy", "baka", "--amogus", "amoma"]), ["sussy"])).toEqual({
+            namedArgs: {
+                sus: null,
+                sussy: null,
+                amogus: "amoma",
+            },
+            positionalArgs: ["baka"],
+        });
+    });
+    it("should accept named arguments with one hyphen", () => {
+        expect(Application.parseArgs(runWith(["-s", "baka", "-amogus", "sus"]))).toEqual({
+            namedArgs: {
+                s: "baka",
+                amogus: "sus",
+            },
+            positionalArgs: [],
+        });
+    });
+    it("should do all of the above", () => {
+        expect(Application.parseArgs(runWith(["p1", "--n1", "v1", "p2", "p3", "-n2", "p4", "--n-3", "v-2", "--n4", "--n5", "v3", "p5"]), ["sussy"])).toEqual({
+            namedArgs: {
+                n1: "v1",
+                n2: null,
+                "n-3": "v-2",
+                n4: null,
+                n5: "v3",
+            },
+            positionalArgs: ["p1", "p2", "p3", "p4", "p5"],
+        });
+    });
+});

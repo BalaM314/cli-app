@@ -107,7 +107,7 @@ Usage: ${this.name} [command] [options]
      * @param providedArgs Pass process.argv without modifying it.
      * @returns Formatted args.
      */
-    static parseArgs(providedArgs) {
+    static parseArgs(providedArgs, valuelessOptions = []) {
         let parameters = {};
         let commands = [];
         let i = 0;
@@ -117,25 +117,24 @@ Usage: ${this.name} [command] [options]
         let args = providedArgs.slice(2);
         while (true) {
             i++;
-            if (i > 1000) {
+            if (i > 1000)
                 throw new ApplicationError("Too many arguments!");
-            }
-            let arg = args.splice(0, 1)[0];
+            let arg = args.shift(); //Grab the first arg
             if (arg == undefined)
-                break;
-            if (arg.startsWith("--")) {
-                if (args[0]?.startsWith("-"))
-                    parameters[arg.substring(2)] = null;
-                else
-                    parameters[arg.substring(2)] = args.splice(0, 1)[0] ?? null;
-            }
-            else if (arg.startsWith("-")) {
-                if (args[0]?.startsWith("-"))
-                    parameters[arg.substring(1)] = null;
-                else
-                    parameters[arg.substring(1)] = args.splice(0, 1)[0] ?? null;
+                break; //If it doesn't exist, return
+            if (arg.match(/^--?([\s\S]+)/)) { //Starts with one or two hyphes
+                const argName = arg.match(/^--?([\s\S]+)/)[1];
+                if (args[0]?.startsWith("-") || valuelessOptions.includes(argName)) {
+                    //If the next arg also starts with a hyphen, or the arg name is valueless, set it to null
+                    parameters[argName] = null;
+                }
+                else {
+                    //Otherwise, pop off the first arg and set it to that
+                    parameters[argName] = args.shift() ?? null;
+                }
             }
             else {
+                //It's a positional arg
                 commands.push(arg);
             }
         }
@@ -154,11 +153,11 @@ Usage: ${this.name} [command] [options]
         }
         else if (this.commands[parsedArgs.positionalArgs[0]]) {
             command = this.commands[parsedArgs.positionalArgs[0]];
-            positionalArgs.splice(0, 1);
+            positionalArgs.shift();
         }
         else if (this.aliases[parsedArgs.positionalArgs[0]]) {
             command = this.commands[this.aliases[parsedArgs.positionalArgs[0]]];
-            positionalArgs.splice(0, 1);
+            positionalArgs.shift();
         }
         else {
             command = Object.values(this.commands).filter(command => command?.defaultCommand)[0] ?? this.commands["help"];
