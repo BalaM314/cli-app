@@ -244,7 +244,7 @@ describe("Application.parseArgs", () => {
         });
     });
     it("should do all of the above", () => {
-        expect(Application.parseArgs(runWith(["p1", "--n1", "v1", "p2", "p3", "-n2", "p4", "--n-3", "v-2", "--n4", "--n5", "v3", "p5"]), ["sussy"])).toEqual({
+        expect(Application.parseArgs(runWith(["p1", "--n1", "v1", "p2", "p3", "-n2", "p4", "--n-3", "v-2", "--n4", "--n5", "v3", "p5"]), ["sussy", "n2"])).toEqual({
             namedArgs: {
                 n1: "v1",
                 n2: null,
