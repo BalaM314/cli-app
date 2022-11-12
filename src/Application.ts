@@ -285,6 +285,9 @@ export class Subcommand<App extends Application | Script<ArgOptions>, A extends 
 			const missingPositionalArgs = requiredPositionalArgs.slice(options.positionalArgs.length).map(arg => arg.name);
 			throw new ApplicationError(`Missing required positional argument${missingPositionalArgs.length == 1 ? "" : "s"} "${missingPositionalArgs.join(", ")}"`);
 		}
+		if(options.positionalArgs.length > this.argOptions.positionalArgs.length){
+			throw new ApplicationError(`Warning: Too many positional arguments (required ${this.argOptions.positionalArgs.length}, provided ${options.positionalArgs.length})"`);
+		}
 		if(options.positionalArgs.length < valuedPositionalArgs.length){
 			for(let i = options.positionalArgs.length; i < valuedPositionalArgs.length; i ++){
 				if(!valuedPositionalArgs[i].default) throw new ApplicationError(`valuedPositionalArgs[${i}].default is not defined. This is an error with cli-app.`);
