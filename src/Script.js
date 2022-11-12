@@ -58,7 +58,7 @@ export class Script {
         //Loop through each named argument passed
         Object.keys(parsedArgs.namedArgs).forEach(arg => 
         //If the arg is not in the named arguments or the aliases
-        (arg in command.argOptions.namedArgs || arg in (command.argOptions.aliases ?? {})) ? "" :
+        (arg in command.argOptions.namedArgs || arg in (command.argOptions.aliases ?? {}) || arg == "help" || arg == "?") ? "" :
             //Display a warning
             console.warn(`Unknown argument ${arg}`));
         try {
