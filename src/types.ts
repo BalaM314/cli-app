@@ -61,4 +61,4 @@ export interface PositionalArgOptions {
 	/**A default value for the argument. */
 	default?: string | null;
 }
-export type CommandHandler<App extends Application | Script<ArgOptions>, A extends Partial<ArgOptions>> = (opts:Options<A>, application:Application) => number | void;
+export type CommandHandler<App extends Application | Script<ArgOptions>, A extends Partial<ArgOptions>> = (opts:Options<A>, application:App) => number | void;
