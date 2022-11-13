@@ -1,11 +1,16 @@
 import { Application } from "./Application";
 import { Script } from "./Script";
 
+/**Options that are passed to a subcommand handler. */
 export interface Options<Opts extends Partial<ArgOptions>> {
+	/**All named args specified with --name value. */
 	namedArgs: Opts["namedArgs"] extends ArgOptions["namedArgs"] ? namedArgs<Opts["namedArgs"]> : {};
+	/**Positional args specified by simply stating them. */
 	positionalArgs: string[];
 	commandName: string;
 }
+
+/**Generates the type definition for named args based on given argOptions. */
 type namedArgs<namedArgOpts extends ArgOptions["namedArgs"]> = {
 	[K in keyof namedArgOpts]: namedArgFrom<namedArgOpts[K]>;
 };
@@ -17,10 +22,12 @@ type namedArgFrom<O extends NamedArgOptions> =
 		(isFalseOrUnknown<O["default"] & O["required"]> extends true ? (string | undefined) : string) :
 		(O["required"] extends true ? null : (undefined | null));
 
+/**Arg options that specify what args a command should accept. */
 export interface ArgOptions {
 	namedArgs: {
 		[option: string]: NamedArgOptions;
 	};
+	/**Aliases for named args' names. */
 	aliases?: {
 		[name: string]: string;
 	}

@@ -1,16 +1,15 @@
 import path from "path";
 import { Application, Subcommand } from "./Application.js";
 import { ApplicationError, StringBuilder } from "./classes.js";
-import { ArgOptions, CommandHandler, FilledArgOptions, Options } from "./types.js";
+import { ArgOptions, CommandHandler, Options } from "./types.js";
 
 
-
+/**
+ * Represents an application that does one thing only.
+ */
 export class Script<A extends Partial<ArgOptions>> {
 	defaultCommand:Subcommand<this, ArgOptions>;
 	helpCommand:Subcommand<this, ArgOptions>;
-	aliases: {
-		[index:string]:string;
-	} = {};
 	name: string;
 	sourceDirectory:string;
 	constructor(name:string, description:string, handler:CommandHandler<Script<A>, A>, argOptions?:A){
@@ -35,6 +34,9 @@ export class Script<A extends Partial<ArgOptions>> {
 			aliases: argOptions?.aliases ?? {}
 		}, true);
 	}
+	/**
+	 * Runs the help command for this application. Do not call directly.
+	 */
 	runHelpCommand(opts:Options<{
 		positionalArgs: [{
 			name: "command",
@@ -82,6 +84,11 @@ export class Script<A extends Partial<ArgOptions>> {
 		process.stdout.write(outputText.text());
 		return 0;
 	}
+	/**
+	 * Runs an application.
+	 * @param args Pass process.argv without modifying it.
+	 * @param options Used for testing.
+	 */
 	run(args:string[], options?:{ throwOnError?:boolean }){
 		this.sourceDirectory = path.join(process.argv[1], "..");
 		let parsedArgs = Application.parseArgs(args);

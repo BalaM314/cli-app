@@ -1,10 +1,19 @@
 import path from "path";
 import { ApplicationError, StringBuilder } from "./classes.js";
+/**
+ * Represents an entire application, with multiple subcommands and various functionality.
+ */
 export class Application {
     constructor(name, description) {
         this.name = name;
         this.description = description;
+        /**
+         * Stores all subcommands.
+         */
         this.commands = {};
+        /**
+         * Stores all command aliases.
+         */
         this.aliases = {};
         this.commands["help"] = new Subcommand("help", this.runHelpCommand.bind(this), "Displays help on all commands or a specific subcommand.", {
             positionalArgs: [{
@@ -16,6 +25,12 @@ export class Application {
         });
         this.sourceDirectory = "null";
     }
+    /**
+     * Adds a subcommand to this application.
+     * @param handler The function that is called when this subcommand is run.
+     * @param argOptions Specifies the args that can be passed to this subcommand through the command line.
+     * @param aliases List of alternative names for this command.
+     */
     command(name, description, handler, isDefault, argOptions, aliases) {
         this.commands[name] = new Subcommand(name, handler, description, {
             namedArgs: argOptions?.namedArgs ?? {},
@@ -26,10 +41,16 @@ export class Application {
             aliases.forEach((alias) => this.alias(alias, name));
         return this; //For daisy chaining
     }
-    alias(name, target) {
-        this.aliases[name] = target;
+    /**
+     * Creates an alias for a subcommand.
+     */
+    alias(alias, target) {
+        this.aliases[alias] = target;
         return this;
     }
+    /**
+     * Runs the help command for this application. Do not call directly.
+     */
     runHelpCommand(opts) {
         if (!(this instanceof Application)) {
             throw new ApplicationError("application.runHelpCommand was bound incorrectly. This is most likely an error with cli-app.");
@@ -143,6 +164,11 @@ Usage: ${this.name} [command] [options]
             namedArgs: parameters
         };
     }
+    /**
+     * Runs an application.
+     * @param args Pass process.argv without modifying it.
+     * @param options Used for testing.
+     */
     run(args, options) {
         this.sourceDirectory = path.join(process.argv[1], "..");
         let parsedArgs = Application.parseArgs(args);
@@ -196,12 +222,16 @@ Usage: ${this.name} [command] [options]
         }
     }
 }
+/**
+ * Represents one subcommand of an application or script.
+ */
 export class Subcommand {
     constructor(name, handler, description = "No description provided", argOptions = { namedArgs: {}, positionalArgs: [] }, defaultCommand = false) {
         this.name = name;
         this.handler = handler;
         this.description = description;
         this.defaultCommand = defaultCommand;
+        //Fill in the provided arg options
         this.argOptions = {
             namedArgs: Object.fromEntries(Object.entries(argOptions.namedArgs).map(([key, value]) => [key, {
                     description: value.description ?? "No description provided",
@@ -219,7 +249,7 @@ export class Subcommand {
                 required: a.default ? false : a.required ?? true,
             })) ?? []
         };
-        //Validate positional args
+        //Make sure positional arg options are valid
         let optionalArgsStarted = false;
         for (let arg of this.argOptions.positionalArgs) {
             if (optionalArgsStarted && (arg.required || arg.default))
@@ -228,12 +258,17 @@ export class Subcommand {
                 optionalArgsStarted = true;
         }
     }
+    /**
+     * Runs this subcommand.
+     */
     run(options, application) {
+        //TODO put the logic in Application.run and Subcommand.run into one function
         if (application.sourceDirectory == "null")
             throw new Error("application.sourceDirectory is null. Don't call subcommand.run() directly.\nThis is an error with cli-app or the application.");
         const requiredPositionalArgs = this.argOptions.positionalArgs.filter(arg => arg.required);
         const valuedPositionalArgs = this.argOptions.positionalArgs
             .filter(arg => arg.required || arg.default);
+        //Handle named args
         Object.entries(this.argOptions.namedArgs).forEach(([name, opt]) => {
             if (!options.namedArgs[name]) { //If the named arg was not specified
                 if (opt.default) { //If it has a default value, set it to that
@@ -249,13 +284,16 @@ export class Subcommand {
                 }
             }
         });
+        //If not enough args were provided, throw an error
         if (options.positionalArgs.length < requiredPositionalArgs.length) {
             const missingPositionalArgs = requiredPositionalArgs.slice(options.positionalArgs.length).map(arg => arg.name);
             throw new ApplicationError(`Missing required positional argument${missingPositionalArgs.length == 1 ? "" : "s"} "${missingPositionalArgs.join(", ")}"`);
         }
+        //If too many args were provided, warn
         if (options.positionalArgs.length > this.argOptions.positionalArgs.length) {
             console.warn(`Warning: Too many positional arguments (required ${this.argOptions.positionalArgs.length}, provided ${options.positionalArgs.length})"`);
         }
+        //Fill in default values for positional args
         if (options.positionalArgs.length < valuedPositionalArgs.length) {
             for (let i = options.positionalArgs.length; i < valuedPositionalArgs.length; i++) {
                 if (!valuedPositionalArgs[i].default)

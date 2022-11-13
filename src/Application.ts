@@ -1,16 +1,25 @@
 import path from "path";
+import { deprecate } from "util";
 import { ApplicationError, StringBuilder } from "./classes.js";
 import type { Script } from "./Script.js";
 import type { ArgOptions, CommandHandler, FilledArgOptions, Options } from "./types.js";
 
 
-
+/**
+ * Represents an entire application, with multiple subcommands and various functionality.
+ */
 export class Application {
+	/**
+	 * Stores all subcommands.
+	 */
 	commands: {
 		[name: string]: Subcommand<Application, ArgOptions> | undefined
 	} = {};
+	/**
+	 * Stores all command aliases.
+	 */
 	aliases: {
-		[index:string]:string;
+		[alias: string]: string;
 	} = {};
 	sourceDirectory:string;
 	constructor(public name:string, public description:string){
@@ -29,6 +38,12 @@ export class Application {
 		);
 		this.sourceDirectory = "null";
 	}
+	/**
+	 * Adds a subcommand to this application.
+	 * @param handler The function that is called when this subcommand is run.
+	 * @param argOptions Specifies the args that can be passed to this subcommand through the command line.
+	 * @param aliases List of alternative names for this command.
+	 */
 	command<A extends Partial<ArgOptions>>(name:string, description:string, handler:CommandHandler<Application, A>, isDefault?:boolean, argOptions?:A, aliases?:string[]):this {
 		this.commands[name] = new Subcommand<Application, A>(name, handler, description, {
 			namedArgs: argOptions?.namedArgs ?? {},
@@ -38,10 +53,16 @@ export class Application {
 		if(aliases) aliases.forEach((alias) => this.alias(alias, name));
 		return this;//For daisy chaining
 	}
-	alias(name:string, target:string){
-		this.aliases[name] = target;
+	/**
+	 * Creates an alias for a subcommand.
+	 */
+	alias(alias:string, target:string){
+		this.aliases[alias] = target;
 		return this;
 	}
+	/**
+	 * Runs the help command for this application. Do not call directly.
+	 */
 	runHelpCommand(opts:Options<{
 		positionalArgs: [{
 			name: "command",
@@ -113,6 +134,7 @@ Usage: ${this.name} [command] [options]
 		}
 		return 0;
 	}
+	
 	static splitLineIntoArguments(line:string):string[] {
 		if(line.includes(`"`)){
 			//aaaaaaaaaaaaaaaaa
@@ -174,6 +196,11 @@ Usage: ${this.name} [command] [options]
 			namedArgs: parameters
 		};
 	}
+	/**
+	 * Runs an application.
+	 * @param args Pass process.argv without modifying it.
+	 * @param options Used for testing.
+	 */
 	run(args:string[], options?:{ throwOnError?:boolean }){
 		this.sourceDirectory = path.join(process.argv[1], "..");
 		let parsedArgs = Application.parseArgs(args);
@@ -228,7 +255,13 @@ Usage: ${this.name} [command] [options]
 	}
 }
 
+/**
+ * Represents one subcommand of an application or script.
+ */
 export class Subcommand<App extends Application | Script<ArgOptions>, A extends Partial<ArgOptions>> {
+	/**
+	 * Information describing the command-line options that this subcommand accepts.
+	 */
 	argOptions:FilledArgOptions;
 	constructor(
 		public name:string,
@@ -237,6 +270,7 @@ export class Subcommand<App extends Application | Script<ArgOptions>, A extends 
 		argOptions:ArgOptions = {namedArgs: {}, positionalArgs: []},
 		public defaultCommand:boolean = false
 	){
+		//Fill in the provided arg options
 		this.argOptions = {
 			namedArgs: Object.fromEntries(Object.entries(argOptions.namedArgs).map(([key, value]) => [key, {
 				description: value.description ?? "No description provided",
@@ -256,18 +290,26 @@ export class Subcommand<App extends Application | Script<ArgOptions>, A extends 
 				required: a.default ? false : a.required ?? true,
 			})) ?? []
 		};
-		//Validate positional args
+
+		//Make sure positional arg options are valid
 		let optionalArgsStarted = false;
 		for(let arg of this.argOptions.positionalArgs){
 			if(optionalArgsStarted && (arg.required || arg.default)) throw new Error("Required positional arguments, or ones with a default value, cannot follow optional ones.\nThis is an error with the application.");
 			if(!(arg.required || arg.default)) optionalArgsStarted = true;
 		}
 	}
+	/**
+	 * Runs this subcommand.
+	 */
 	run(options:Options<ArgOptions>, application:App){
+		//TODO put the logic in Application.run and Subcommand.run into one function
+
 		if(application.sourceDirectory == "null") throw new Error("application.sourceDirectory is null. Don't call subcommand.run() directly.\nThis is an error with cli-app or the application.");
 		const requiredPositionalArgs = this.argOptions.positionalArgs.filter(arg => arg.required);
 		const valuedPositionalArgs = this.argOptions.positionalArgs
 			.filter(arg => arg.required || arg.default);
+
+		//Handle named args
 		Object.entries(this.argOptions.namedArgs).forEach(([name, opt]) => {
 			if(!options.namedArgs[name]){//If the named arg was not specified
 				if(opt.default){//If it has a default value, set it to that
@@ -281,19 +323,26 @@ export class Subcommand<App extends Application | Script<ArgOptions>, A extends 
 				}
 			}
 		});
+
+		//If not enough args were provided, throw an error
 		if(options.positionalArgs.length < requiredPositionalArgs.length){
 			const missingPositionalArgs = requiredPositionalArgs.slice(options.positionalArgs.length).map(arg => arg.name);
 			throw new ApplicationError(`Missing required positional argument${missingPositionalArgs.length == 1 ? "" : "s"} "${missingPositionalArgs.join(", ")}"`);
 		}
+
+		//If too many args were provided, warn
 		if(options.positionalArgs.length > this.argOptions.positionalArgs.length){
 			console.warn(`Warning: Too many positional arguments (required ${this.argOptions.positionalArgs.length}, provided ${options.positionalArgs.length})"`);
 		}
+
+		//Fill in default values for positional args
 		if(options.positionalArgs.length < valuedPositionalArgs.length){
 			for(let i = options.positionalArgs.length; i < valuedPositionalArgs.length; i ++){
 				if(!valuedPositionalArgs[i].default) throw new ApplicationError(`valuedPositionalArgs[${i}].default is not defined. This is an error with cli-app.`);
 				options.positionalArgs[i] = valuedPositionalArgs[i].default!;
 			}
 		}
+
 		this.handler({
 			...options
 		}, application as never);
