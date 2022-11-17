@@ -2,13 +2,14 @@ import { Application } from "./Application";
 import { Script } from "./Script";
 
 /**Options that are passed to a subcommand handler. */
-export interface Options<Opts extends Partial<ArgOptions>> {
+export interface SpecificOptions<Opts extends Partial<ArgOptions>> {
 	/**All named args specified with --name value. */
 	namedArgs: Opts["namedArgs"] extends ArgOptions["namedArgs"] ? namedArgs<Opts["namedArgs"]> : {};
 	/**Positional args specified by simply stating them. */
 	positionalArgs: string[];
 	commandName: string;
 }
+export type Options = SpecificOptions<ArgOptions>;
 
 /**Generates the type definition for named args based on given argOptions. */
 type namedArgs<namedArgOpts extends ArgOptions["namedArgs"]> = {
@@ -61,4 +62,4 @@ export interface PositionalArgOptions {
 	/**A default value for the argument. */
 	default?: string | null;
 }
-export type CommandHandler<App extends Application | Script<ArgOptions>, A extends Partial<ArgOptions>> = (opts:Options<A>, application:App) => unknown;
+export type CommandHandler<App extends Application | Script<ArgOptions>, A extends Partial<ArgOptions>> = (opts:SpecificOptions<A>, application:App) => unknown;

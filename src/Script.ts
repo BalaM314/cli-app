@@ -1,7 +1,7 @@
 import path from "path";
 import { Application, Subcommand } from "./Application.js";
 import { ApplicationError, StringBuilder } from "./classes.js";
-import { ArgOptions, CommandHandler, Options } from "./types.js";
+import { ArgOptions, CommandHandler, SpecificOptions } from "./types.js";
 
 
 /**
@@ -37,7 +37,7 @@ export class Script<A extends Partial<ArgOptions>> {
 	/**
 	 * Runs the help command for this application. Do not call directly.
 	 */
-	runHelpCommand(opts:Options<{
+	runHelpCommand(opts:SpecificOptions<{
 		positionalArgs: [{
 			name: "command",
 			description: "The command to get help on.",

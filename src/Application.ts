@@ -1,7 +1,7 @@
 import * as path from "path";
 import { ApplicationError, StringBuilder } from "./classes.js";
 import type { Script } from "./Script.js";
-import type { ArgOptions, CommandHandler, FilledArgOptions, Options } from "./types.js";
+import type { ArgOptions, CommandHandler, FilledArgOptions, SpecificOptions } from "./types.js";
 
 
 /**
@@ -62,7 +62,7 @@ export class Application {
 	/**
 	 * Runs the help command for this application. Do not call directly.
 	 */
-	runHelpCommand(opts:Options<{
+	runHelpCommand(opts:SpecificOptions<{
 		positionalArgs: [{
 			name: "command",
 			description: "The command to get help on.",
@@ -160,7 +160,7 @@ Usage: ${this.name} [command] [options]
 	 * @param providedArgs Pass process.argv without modifying it.
 	 * @returns Formatted args.
 	 */
-	static parseArgs(providedArgs:string[], valuelessOptions:string[] = []):Omit<Options<ArgOptions>, "commandName"> {
+	static parseArgs(providedArgs:string[], valuelessOptions:string[] = []):Omit<SpecificOptions<ArgOptions>, "commandName"> {
 		let parameters: {
 			[index: string]: string | null;
 		} = {};
@@ -300,7 +300,7 @@ export class Subcommand<App extends Application | Script<ArgOptions>, A extends 
 	/**
 	 * Runs this subcommand.
 	 */
-	run(options:Options<ArgOptions>, application:App){
+	run(options:SpecificOptions<ArgOptions>, application:App){
 		//TODO put the logic in Application.run and Subcommand.run into one function
 
 		if(application.sourceDirectory == "null") throw new Error("application.sourceDirectory is null. Don't call subcommand.run() directly.\nThis is an error with cli-app or the application.");
