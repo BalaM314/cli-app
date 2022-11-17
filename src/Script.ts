@@ -1,4 +1,4 @@
-import path from "path";
+import * as path from "path";
 import { Application, Subcommand } from "./Application.js";
 import { ApplicationError, StringBuilder } from "./classes.js";
 import { ArgOptions, CommandHandler, SpecificOptions } from "./types.js";
