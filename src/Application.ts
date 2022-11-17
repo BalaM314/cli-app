@@ -1,5 +1,4 @@
-import path from "path";
-import { deprecate } from "util";
+import * as path from "path";
 import { ApplicationError, StringBuilder } from "./classes.js";
 import type { Script } from "./Script.js";
 import type { ArgOptions, CommandHandler, FilledArgOptions, Options } from "./types.js";
