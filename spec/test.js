@@ -65,6 +65,17 @@ myApp.command("doStuff", "does stuff", (opts) => {
             description: "required",
         }
     ]
+})
+    .command("dashdash", "tests '--'", (opts, app) => {
+    console.log(opts.namedArgs.sussyBaka);
+    console.log(opts.positionalArgs);
+}, false, {
+    namedArgs: {
+        sussyBaka: {
+            default: "imposter",
+            description: "sussy baka"
+        }
+    }
 });
 const script = new Script("test-script", "A testing script", (opts, app) => {
     console.log(opts.namedArgs.named1);
@@ -76,5 +87,5 @@ const script = new Script("test-script", "A testing script", (opts, app) => {
         }
     }
 });
-// myApp.run(process.argv);
-script.run(process.argv);
+myApp.run(process.argv);
+// script.run(process.argv);

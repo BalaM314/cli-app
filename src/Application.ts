@@ -176,7 +176,11 @@ Usage: ${this.name} [command] [options]
 
 			let arg = args.shift(); //Grab the first arg
 			if(arg == undefined) break; //If it doesn't exist, return
-			if(arg.match(/^--?([\s\S]+?)=([\s\S]+?)$/)){ //--name=value form
+			if(arg == "--"){ //Arg separator
+				//Everything else should be considered a positional argument
+				commands.push(arg, ...args);
+				break;
+			} else if(arg.match(/^--?([\s\S]+?)=([\s\S]+?)$/)){ //--name=value form
 				const [, name, value] = arg.match(/^--?([\s\S]+?)=([\s\S]+?)$/)!;
 				parameters[name] = value;
 			} else if(arg.match(/^--?([\s\S]+)/)){ //Starts with one or two hyphes
