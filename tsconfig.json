@@ -2,11 +2,11 @@
   "compilerOptions": {
     "target": "es2021",
     "module": "ES2022",
+    "lib": ["ES2022"],
     "moduleResolution": "node",
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "strict": true,
-    "removeComments": false,
-    "allowSyntheticDefaultImports": true
+    "removeComments": false
   }
 }
