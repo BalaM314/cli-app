@@ -294,7 +294,8 @@ export class Subcommand<App extends Application | Script<ArgOptions>, A extends 
 				...a,
 				default: a.default ?? null,
 				required: a.default ? false : a.required ?? true,
-			})) ?? []
+			})) ?? [],
+			positionalArgCountCheck: argOptions.positionalArgCountCheck ?? "ignore"
 		};
 
 		//Make sure positional arg options are valid
@@ -337,7 +338,7 @@ export class Subcommand<App extends Application | Script<ArgOptions>, A extends 
 		}
 
 		//If too many args were provided, warn
-		if(options.positionalArgs.length > this.argOptions.positionalArgs.length){
+		if(this.argOptions.positionalArgCountCheck == "warn" && options.positionalArgs.length > this.argOptions.positionalArgs.length){
 			console.warn(`Warning: Too many positional arguments (required ${this.argOptions.positionalArgs.length}, provided ${options.positionalArgs.length})`);
 		}
 

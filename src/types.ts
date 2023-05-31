@@ -32,7 +32,13 @@ export interface ArgOptions {
 	aliases?: {
 		[name: string]: string;
 	}
-	positionalArgs: PositionalArgOptions[]
+	positionalArgs: PositionalArgOptions[];
+	/**
+	 * If "warn": prints a warning if there are more positional args than the command is supposed to accept.
+	 * If "ignore", ignores.
+	 * Default: "ignore".
+	 **/
+	positionalArgCountCheck?: "warn" | "ignore";
 }
 
 /**Makes every property in an object and all of its child objects required. */

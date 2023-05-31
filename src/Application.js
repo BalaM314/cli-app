@@ -256,7 +256,8 @@ export class Subcommand {
                 ...a,
                 default: a.default ?? null,
                 required: a.default ? false : a.required ?? true,
-            })) ?? []
+            })) ?? [],
+            positionalArgCountCheck: argOptions.positionalArgCountCheck ?? "ignore"
         };
         //Make sure positional arg options are valid
         let optionalArgsStarted = false;
@@ -299,7 +300,7 @@ export class Subcommand {
             throw new ApplicationError(`Missing required positional argument${missingPositionalArgs.length == 1 ? "" : "s"} "${missingPositionalArgs.join(", ")}"`);
         }
         //If too many args were provided, warn
-        if (options.positionalArgs.length > this.argOptions.positionalArgs.length) {
+        if (this.argOptions.positionalArgCountCheck == "warn" && options.positionalArgs.length > this.argOptions.positionalArgs.length) {
             console.warn(`Warning: Too many positional arguments (required ${this.argOptions.positionalArgs.length}, provided ${options.positionalArgs.length})`);
         }
         //Fill in default values for positional args
