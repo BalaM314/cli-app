@@ -19,7 +19,7 @@ type namedArgs<namedArgOpts extends ArgOptions["namedArgs"]> = {
 //This code is super cursed. Fix if you know how.
 type namedArgFrom<O extends NamedArgOptions> =
 	NamedArgOptions extends O ? (string | undefined | null) :
-	true extends O["needsValue"] ? 
+	true extends O["needsValue"] ?
 		(isFalseOrUnknown<O["default"] & O["required"]> extends true ? (string | undefined) : string) :
 		(O["required"] extends true ? null : (undefined | null));
 

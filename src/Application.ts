@@ -8,15 +8,11 @@ import type { ArgOptions, CommandHandler, FilledArgOptions, SpecificOptions } fr
  * Represents an entire application, with multiple subcommands and various functionality.
  */
 export class Application {
-	/**
-	 * Stores all subcommands.
-	 */
+	/** Stores all subcommands. */
 	commands: {
 		[name: string]: Subcommand<Application, ArgOptions> | undefined
 	} = {};
-	/**
-	 * Stores all command aliases.
-	 */
+	/** Stores all command aliases. */
 	aliases: {
 		[alias: string]: string;
 	} = {};
@@ -52,16 +48,12 @@ export class Application {
 		if(aliases) aliases.forEach((alias) => this.alias(alias, name));
 		return this;//For daisy chaining
 	}
-	/**
-	 * Creates an alias for a subcommand.
-	 */
+	/** Creates an alias for a subcommand. */
 	alias(alias:string, target:string){
 		this.aliases[alias] = target;
 		return this;
 	}
-	/**
-	 * Runs the help command for this application. Do not call directly.
-	 */
+	/** Runs the help command for this application. Do not call directly. */
 	runHelpCommand(opts:SpecificOptions<{
 		positionalArgs: [{
 			name: "command",
@@ -79,12 +71,12 @@ export class Application {
 			if(command){
 				const aliases = Object.entries(this.aliases).filter(([alias, name]) => name == commandName).map(([alias, name]) => alias);
 				const positionalArgsFragment =
-					command.argOptions.positionalArgs.map(opt => 
+					command.argOptions.positionalArgs.map(opt =>
 						opt.required ? `<${opt.name}>` : `[<${opt.name}>]`
 					).join(" ");
 				const namedArgsFragment =
 					Object.entries(command.argOptions.namedArgs)
-						.map(([name, opt]) => 
+						.map(([name, opt]) =>
 							opt.required ? `--${name}${opt.needsValue ? ` <${name}>` : ``}` : `[--${name}${opt.needsValue ? ` <${name}>` : ``}]`
 						).join(" ");
 				const outputText = new StringBuilder()
@@ -99,7 +91,7 @@ export class Application {
 
 				if(Object.entries(command.argOptions.namedArgs).length != 0){
 					Object.entries(command.argOptions.namedArgs)
-					.map(([name, opt]) => 
+					.map(([name, opt]) =>
 					`<${name}>: ${opt.description}`
 					).forEach(line => outputText.addLine(line));
 					outputText.addLine();
@@ -107,7 +99,7 @@ export class Application {
 
 				if(command.argOptions.positionalArgs.length != 0){
 					command.argOptions.positionalArgs
-					.map((opt) => 
+					.map((opt) =>
 					`<${opt.name}>: ${opt.description}`
 					).forEach(line => outputText.addLine(line));
 					outputText.addLine();
@@ -226,19 +218,19 @@ Usage: ${this.name} [command] [options]
 		if(command){
 
 			//Loop through each named argument passed
-			Object.keys(parsedArgs.namedArgs).forEach(arg => 
+			Object.keys(parsedArgs.namedArgs).forEach(arg => {
 				//If the arg is not in the named arguments or the aliases
-				(arg in command!.argOptions.namedArgs || arg in (command!.argOptions.aliases ?? {}) || arg == "help" || arg == "?") ? "" :
+				if(!(arg in command!.argOptions.namedArgs || arg in command!.argOptions.aliases || arg == "help" || arg == "?"))
 					//Display a warning
-					console.warn(`Unknown argument ${arg}`)
-			);
+					console.warn(`Unknown argument ${arg}`);
+			});
 
 			try {
 				command.run({
 					namedArgs: {
 						...Object.fromEntries(
 							Object.entries(parsedArgs.namedArgs)
-							.map(([name, value]) => 
+							.map(([name, value]) =>
 								[command?.argOptions.aliases?.[name] ?? name, value]
 							)
 						)

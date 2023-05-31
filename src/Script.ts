@@ -47,12 +47,12 @@ export class Script<A extends Partial<ArgOptions>> {
 	}>):number {
 		
 		const positionalArgsFragment =
-			this.defaultCommand.argOptions.positionalArgs.map(opt => 
+			this.defaultCommand.argOptions.positionalArgs.map(opt =>
 				opt.required ? `<${opt.name}>` : `[<${opt.name}>]`
 			).join(" ");
 		const namedArgsFragment =
 			Object.entries(this.defaultCommand.argOptions.namedArgs)
-				.map(([name, opt]) => 
+				.map(([name, opt]) =>
 					opt.required ? `--${name}${opt.needsValue ? ` <${name}>` : ""}` : `[--${name}${opt.needsValue ? ` <${name}>` : ``}]`
 				).join(" ");
 		const outputText = new StringBuilder()
@@ -67,7 +67,7 @@ export class Script<A extends Partial<ArgOptions>> {
 
 		if(Object.entries(this.defaultCommand.argOptions.namedArgs).length != 0){
 			Object.entries(this.defaultCommand.argOptions.namedArgs)
-			.map(([name, opt]) => 
+			.map(([name, opt]) =>
 			`<${name}>: ${opt.description}`
 			).forEach(line => outputText.addLine(line));
 			outputText.addLine();
@@ -75,7 +75,7 @@ export class Script<A extends Partial<ArgOptions>> {
 
 		if(this.defaultCommand.argOptions.positionalArgs.length != 0){
 			this.defaultCommand.argOptions.positionalArgs
-			.map((opt) => 
+			.map((opt) =>
 			`<${opt.name}>: ${opt.description}`
 			).forEach(line => outputText.addLine(line));
 			outputText.addLine();
@@ -100,7 +100,7 @@ export class Script<A extends Partial<ArgOptions>> {
 		}
 		
 		//Loop through each named argument passed
-		Object.keys(parsedArgs.namedArgs).forEach(arg => 
+		Object.keys(parsedArgs.namedArgs).forEach(arg =>
 			//If the arg is not in the named arguments or the aliases
 			(arg in command!.argOptions.namedArgs || arg in (command!.argOptions.aliases ?? {}) || arg == "help" || arg == "?") ? "" :
 				//Display a warning
@@ -112,7 +112,7 @@ export class Script<A extends Partial<ArgOptions>> {
 				namedArgs: {
 					...Object.fromEntries(
 						Object.entries(parsedArgs.namedArgs)
-						.map(([name, value]) => 
+						.map(([name, value]) =>
 							[command?.argOptions.aliases?.[name] ?? name, value]
 						)
 					)

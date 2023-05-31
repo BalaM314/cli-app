@@ -7,13 +7,9 @@ export class Application {
     constructor(name, description) {
         this.name = name;
         this.description = description;
-        /**
-         * Stores all subcommands.
-         */
+        /** Stores all subcommands. */
         this.commands = {};
-        /**
-         * Stores all command aliases.
-         */
+        /** Stores all command aliases. */
         this.aliases = {};
         this.commands["help"] = new Subcommand("help", this.runHelpCommand.bind(this), "Displays help on all commands or a specific subcommand.", {
             positionalArgs: [{
@@ -41,16 +37,12 @@ export class Application {
             aliases.forEach((alias) => this.alias(alias, name));
         return this; //For daisy chaining
     }
-    /**
-     * Creates an alias for a subcommand.
-     */
+    /** Creates an alias for a subcommand. */
     alias(alias, target) {
         this.aliases[alias] = target;
         return this;
     }
-    /**
-     * Runs the help command for this application. Do not call directly.
-     */
+    /** Runs the help command for this application. Do not call directly. */
     runHelpCommand(opts) {
         if (!(this instanceof Application)) {
             throw new ApplicationError("application.runHelpCommand was bound incorrectly. This is most likely an error with cli-app.");
@@ -199,11 +191,12 @@ Usage: ${this.name} [command] [options]
         }
         if (command) {
             //Loop through each named argument passed
-            Object.keys(parsedArgs.namedArgs).forEach(arg => 
-            //If the arg is not in the named arguments or the aliases
-            (arg in command.argOptions.namedArgs || arg in (command.argOptions.aliases ?? {}) || arg == "help" || arg == "?") ? "" :
-                //Display a warning
-                console.warn(`Unknown argument ${arg}`));
+            Object.keys(parsedArgs.namedArgs).forEach(arg => {
+                //If the arg is not in the named arguments or the aliases
+                if (!(arg in command.argOptions.namedArgs || arg in command.argOptions.aliases || arg == "help" || arg == "?"))
+                    //Display a warning
+                    console.warn(`Unknown argument ${arg}`);
+            });
             try {
                 command.run({
                     namedArgs: {
