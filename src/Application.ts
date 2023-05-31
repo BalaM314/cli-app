@@ -167,7 +167,7 @@ Usage: ${this.name} [command] [options]
 		let commands:string[] = [];
 		let i = 0;
 		if(!providedArgs[0]?.includes("node")){
-			throw new ApplicationError("Attempted to parse invalid args. Unless you are running this application in a strange way, this is likely an error with the application itself.");
+			throw new ApplicationError("Attempted to parse invalid args. Unless you are running this application in a strange way, this is likely an error with the application.");
 		}
 		let args = providedArgs.slice(2);
 		while(true){
@@ -176,7 +176,10 @@ Usage: ${this.name} [command] [options]
 
 			let arg = args.shift(); //Grab the first arg
 			if(arg == undefined) break; //If it doesn't exist, return
-			if(arg.match(/^--?([\s\S]+)/)){ //Starts with one or two hyphes
+			if(arg.match(/^--?([\s\S]+?)=([\s\S]+?)$/)){ //--name=value form
+				const [, name, value] = arg.match(/^--?([\s\S]+?)=([\s\S]+?)$/)!;
+				parameters[name] = value;
+			} else if(arg.match(/^--?([\s\S]+)/)){ //Starts with one or two hyphes
 				const argName = arg.match(/^--?([\s\S]+)/)![1];
 				if(args[0]?.startsWith("-") || valuelessOptions.includes(argName)){
 					//If the next arg also starts with a hyphen, or the arg name is valueless, set it to null
@@ -331,7 +334,7 @@ export class Subcommand<App extends Application | Script<ArgOptions>, A extends 
 
 		//If too many args were provided, warn
 		if(options.positionalArgs.length > this.argOptions.positionalArgs.length){
-			console.warn(`Warning: Too many positional arguments (required ${this.argOptions.positionalArgs.length}, provided ${options.positionalArgs.length})"`);
+			console.warn(`Warning: Too many positional arguments (required ${this.argOptions.positionalArgs.length}, provided ${options.positionalArgs.length})`);
 		}
 
 		//Fill in default values for positional args
