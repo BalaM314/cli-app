@@ -227,6 +227,15 @@ describe("Application.parseArgs", () => {
 			positionalArgs: [],
 		});
 	});
+	it("should parse named args of the form --name=value", () => {
+		expect(Application.parseArgs(runWith(["--sussy", "baka", "--amogus=sus"]))).toEqual({
+			namedArgs: {
+				sussy: "baka",
+				amogus: "sus",
+			},
+			positionalArgs: [],
+		});
+	});
 	it("should set named args to null if a value is not specified", () => {
 		expect(Application.parseArgs(runWith(["--sussy", "baka", "--amogus", "--amoma"]))).toEqual({
 			namedArgs: {
@@ -263,6 +272,14 @@ describe("Application.parseArgs", () => {
 				amogus: "sus",
 			},
 			positionalArgs: [],
+		});
+	});
+	it("should handle the -- arg separator", () => {
+		expect(Application.parseArgs(runWith(["pos", "-s", "baka", "--", "sus", "--amogus"]))).toEqual({
+			namedArgs: {
+				s: "baka",
+			},
+			positionalArgs: ["pos", "--", "sus", "--amogus"],
 		});
 	});
 	it("should do all of the above", () => {
