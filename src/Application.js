@@ -171,7 +171,7 @@ Usage: ${this.name} [command] [options]
      * @param options Used for testing.
      */
     run(args, options) {
-        this.sourceDirectory = path.join(process.argv[1], "..");
+        this.sourceDirectory = path.join(args[1], "..");
         let parsedArgs = Application.parseArgs(args);
         let command;
         let { positionalArgs } = parsedArgs;

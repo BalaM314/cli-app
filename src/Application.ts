@@ -16,6 +16,7 @@ export class Application {
 	aliases: {
 		[alias: string]: string;
 	} = {};
+	/** The directory containing this application's main file. Uses slash or backslash dependent on platform. */
 	sourceDirectory:string;
 	constructor(public name:string, public description:string){
 		this.commands["help"] = new Subcommand(
@@ -200,7 +201,7 @@ Usage: ${this.name} [command] [options]
 	 * @param options Used for testing.
 	 */
 	run(args:string[], options?:{ throwOnError?:boolean }){
-		this.sourceDirectory = path.join(process.argv[1], "..");
+		this.sourceDirectory = path.join(args[1], "..");
 		let parsedArgs = Application.parseArgs(args);
 		let command:Subcommand<Application, ArgOptions> | undefined;
 		let { positionalArgs } = parsedArgs;
