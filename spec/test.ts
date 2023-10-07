@@ -16,7 +16,7 @@ myApp.command("doStuff", "does stuff", (opts) => {
 	console.log(`named arg required: ${opts.namedArgs["required"]}`);
 	console.log(`named arg optional: ${opts.namedArgs["optional"]}`);
 	console.log(`named arg defaultVal: ${opts.namedArgs["defaultVal"]}`);
-	console.log(`named arg noValue: ${opts.namedArgs["noValue"]}`);
+	console.log(`named arg noValue: ${opts.namedArgs["noValue"]} (in operator: ${"noValue" in opts.namedArgs})`);
 	console.log(`positional arg required: ${opts.positionalArgs[0]}`);
 	console.log(`positional arg defaultVal: ${opts.positionalArgs[1]}`);
 	console.log(`positional arg optional: ${opts.positionalArgs[2]}`);

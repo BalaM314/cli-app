@@ -293,7 +293,7 @@ export class Subcommand<App extends Application | Script<ArgOptions>, A extends 
 
 		//Validate named args
 		for(const [key, opt] of Object.entries(this.argOptions.namedArgs)){
-			if(!opt.needsValue && opt.default != null) throw new Error(`Application configuration error: "default" property of option "${key}" with needsValue:false was set to invalid value ${opt.default} (valid values are "false" and "true")`);
+			if(opt.needsValue === false && !(["false", "true", null] as unknown[]).includes(opt.default)) throw new Error(`cli-app configuration error: "default" property of option "${key}" with needsValue:false was set to invalid value ${opt.default} (valid values are "false" and "true")`);
 		}
 
 		//Make sure positional arg options are valid
@@ -318,8 +318,7 @@ export class Subcommand<App extends Application | Script<ArgOptions>, A extends 
 		Object.entries(this.argOptions.namedArgs).forEach(([name, opt]) => {
 			if(!opt.needsValue){
 				if(options.namedArgs[name] === undefined){
-					if(opt.default == "false") options.namedArgs[name] = undefined;
-					else if(opt.default == "true") options.namedArgs[name] = "true";
+					if(opt.default == "true") options.namedArgs[name] = "true";
 				} else options.namedArgs[name] = "true";
 			} else {
 				if(!options.namedArgs[name]){//If the named arg was not specified

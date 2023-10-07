@@ -21,7 +21,7 @@ type namedArgFrom<O extends NamedArgOptions> =
 	NamedArgOptions extends O ? (string | undefined | null) :
 	true extends O["needsValue"] ?
 		(isFalseOrUnknown<O["default"] & O["required"]> extends true ? (string | undefined) : string) :
-		(O["required"] extends true ? null : (undefined | null));
+		(O["required"] extends true ? "true" : (undefined | "true"));
 
 /**Arg options that specify what args a command should accept. */
 export interface ArgOptions {
