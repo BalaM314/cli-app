@@ -291,10 +291,15 @@ export class Subcommand<App extends Application | Script<ArgOptions>, A extends 
 			positionalArgCountCheck: argOptions.positionalArgCountCheck ?? "ignore"
 		};
 
+		//Validate named args
+		for(const [key, opt] of Object.entries(this.argOptions.namedArgs)){
+			if(!opt.needsValue && opt.default != null) throw new Error(`Application configuration error: "default" property of option "${key}" with needsValue:false was set to invalid value ${opt.default} (valid values are "false" and "true")`);
+		}
+
 		//Make sure positional arg options are valid
 		let optionalArgsStarted = false;
 		for(let arg of this.argOptions.positionalArgs){
-			if(optionalArgsStarted && (arg.required || arg.default)) throw new Error("Required positional arguments, or ones with a default value, cannot follow optional ones.\nThis is an error with the application.");
+			if(optionalArgsStarted && (arg.required || arg.default)) throw new Error(`cli-app configuration error in subcommand ${name}: Required positional arguments, or ones with a default value, cannot follow optional ones.`);
 			if(!(arg.required || arg.default)) optionalArgsStarted = true;
 		}
 	}
@@ -311,15 +316,18 @@ export class Subcommand<App extends Application | Script<ArgOptions>, A extends 
 
 		//Handle named args
 		Object.entries(this.argOptions.namedArgs).forEach(([name, opt]) => {
-			if(!options.namedArgs[name]){//If the named arg was not specified
-				if(opt.default){//If it has a default value, set it to that
-					options.namedArgs[name] = opt.default;
-				} else if(opt.required){//If it's required, throw an error
-					throw new ApplicationError(`No value specified for required named argument "${name}".`);
-				}
+			if(!opt.needsValue){
+				if(options.namedArgs[name] === undefined){
+					if(opt.default == "false") options.namedArgs[name] = undefined;
+					else if(opt.default == "true") options.namedArgs[name] = "true";
+				} else options.namedArgs[name] = "true";
 			} else {
-				if(!opt.needsValue){
-					options.namedArgs[name] = options.namedArgs[name] == undefined ? undefined : "true";
+				if(!options.namedArgs[name]){//If the named arg was not specified
+					if(opt.default){//If it has a default value, set it to that
+						options.namedArgs[name] = opt.default;
+					} else if(opt.required){//If it's required, throw an error
+						throw new ApplicationError(`No value specified for required named argument "${name}".`);
+					}
 				}
 			}
 		});
