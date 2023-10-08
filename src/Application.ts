@@ -325,7 +325,7 @@ export class Subcommand<App extends Application | Script<ArgOptions>, A extends 
 					if(opt.default){//If it has a default value, set it to that
 						options.namedArgs[name] = opt.default;
 					} else if(opt.required){//If it's required, throw an error
-						throw new ApplicationError(`No value specified for required named argument "${name}".`);
+						throw new ApplicationError(`No value specified for required named argument "${name}". To specify it, run the command with --${name} <value>`);
 					}
 				}
 			}
@@ -334,7 +334,7 @@ export class Subcommand<App extends Application | Script<ArgOptions>, A extends 
 		//If not enough args were provided, throw an error
 		if(options.positionalArgs.length < requiredPositionalArgs.length){
 			const missingPositionalArgs = requiredPositionalArgs.slice(options.positionalArgs.length).map(arg => arg.name);
-			throw new ApplicationError(`Missing required positional argument${missingPositionalArgs.length == 1 ? "" : "s"} "${missingPositionalArgs.join(", ")}"`);
+			throw new ApplicationError(`Missing required positional argument${missingPositionalArgs.length == 1 ? "" : "s"} "${missingPositionalArgs.join(", ")}". To specify it, run the command passing <value> as an argument.`);
 		}
 
 		//If too many args were provided, warn
