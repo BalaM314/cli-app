@@ -35,13 +35,9 @@ type namedArgFrom<O extends NamedArgOptions> =
 
 /**Arg options that specify what args a command should accept. */
 export interface ArgOptions {
-	namedArgs: {
-		[option: string]: NamedArgOptions;
-	};
+	namedArgs: Record<string, NamedArgOptions>;
 	/**Aliases for named args' names. */
-	aliases?: {
-		[name: string]: string;
-	}
+	aliases?: Record<string, string>;
 	positionalArgs: PositionalArgOptions[];
 	/**
 	 * If "warn": prints a warning if there are more positional args than the command is supposed to accept.
@@ -52,9 +48,12 @@ export interface ArgOptions {
 }
 
 /**Makes every property in an object and all of its child objects required. */
-export type RequiredRecursive<T> = {
-	[P in keyof T]-?: T[P] extends Array<infer A> ? RequiredRecursive<A>[] : T[P] extends Record<string, unknown> ? RequiredRecursive<T[P]> : T[P];
-};
+export type RequiredRecursive<T> = 
+	T extends Array<infer A> ? RequiredRecursive<A>[] :
+	{
+		[P in keyof T]-?: RequiredRecursive<T[P]>;
+	};
+;
 
 export type isFalseOrUnknown<T> = unknown extends T ? true : false extends T ? true : false;
 
