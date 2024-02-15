@@ -1,3 +1,12 @@
+/*
+Copyright © <BalaM314>, 2024.
+This file is part of cli-app.
+cli-app is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+cli-app is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more details.
+You should have received a copy of the GNU Lesser General Public License along with cli-app. If not, see <https://www.gnu.org/licenses/>.
+
+Contains the code for the Application class, which represents a command-line application.
+*/
 import * as path from "path";
 import { ApplicationError, StringBuilder } from "./classes.js";
 /**
@@ -239,11 +248,12 @@ export class Subcommand {
                     description: value.description ?? "No description provided",
                     required: value.default ? false : value.required ?? false,
                     default: value.default ?? null,
-                    needsValue: value.needsValue ?? true
+                    needsValue: value.needsValue ?? true,
+                    aliases: (value.aliases ?? []).concat(Object.entries(argOptions.aliases ?? {}).filter(([from, to]) => from == key).map(([from, to]) => to)),
                 }])),
             aliases: Object.fromEntries([
                 ...Object.entries(argOptions.aliases ?? []),
-                ...([].concat(...Object.entries(argOptions.namedArgs).map(([name, opts]) => opts.aliases?.map(alias => [alias, name]) ?? [])))
+                ...Object.entries(argOptions.namedArgs).map(([name, opts]) => opts.aliases?.map(alias => [alias, name]) ?? []).flat(),
             ]),
             positionalArgs: argOptions.positionalArgs.map(a => ({
                 ...a,

@@ -11,7 +11,7 @@ Contains the code for the Application class, which represents a command-line app
 import * as path from "path";
 import { ApplicationError, StringBuilder } from "./classes.js";
 import type { Script } from "./Script.js";
-import type { ArgOptions, CommandHandler, FilledArgOptions, SpecificOptions } from "./types.js";
+import type { ArgOptions, CommandHandler, FilledArgOptions, NamedArgOptions, RequiredRecursive, SpecificOptions } from "./types.js";
 
 
 /**
@@ -281,17 +281,18 @@ export class Subcommand<App extends Application | Script<ArgOptions>, A extends 
 	){
 		//Fill in the provided arg options
 		this.argOptions = {
-			namedArgs: Object.fromEntries(Object.entries(argOptions.namedArgs).map(([key, value]) => [key, {
+			namedArgs: Object.fromEntries(Object.entries(argOptions.namedArgs).map<[string, RequiredRecursive<NamedArgOptions>]>(([key, value]) => [key, {
 				description: value.description ?? "No description provided",
 				required: value.default ? false : value.required ?? false,
 				default: value.default ?? null,
-				needsValue: value.needsValue ?? true
+				needsValue: value.needsValue ?? true,
+				aliases: (value.aliases ?? []).concat(Object.entries(argOptions.aliases ?? {}).filter(([from, to]) => from == key).map(([from, to]) => to)),
 			}])),
-			aliases: Object.fromEntries([
+			aliases: Object.fromEntries<string>([
 				...Object.entries(argOptions.aliases ?? []),
-				...(([] as [string, string][]).concat(
-					...Object.entries(argOptions.namedArgs).map(([name, opts]) => opts.aliases?.map(alias => [alias, name] as [string, string]) ?? [])
-				))
+				...Object.entries(argOptions.namedArgs).map(([name, opts]) =>
+					opts.aliases?.map(alias => [alias, name] as [string, string]) ?? []
+				).flat(),
 			]),
 			positionalArgs: argOptions.positionalArgs.map(a => ({
 				...a,
