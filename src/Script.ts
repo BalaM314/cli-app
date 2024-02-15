@@ -101,7 +101,7 @@ export class Script<A extends Partial<ArgOptions>> {
 	 */
 	run(args:string[], options?:{ throwOnError?:boolean }){
 		this.sourceDirectory = path.join(process.argv[1], "..");
-		let parsedArgs = Application.parseArgs(args);
+		let parsedArgs = Application.parseArgs(args, Object.entries(this.defaultCommand.argOptions.namedArgs).filter(([k, v]) => !v.needsValue).map(([k, v]) => v.aliases.concat(k)).flat());
 		let command:Subcommand<this, A>;
 		if("help" in parsedArgs.namedArgs || "?" in parsedArgs.namedArgs){
 			command = this.helpCommand;
