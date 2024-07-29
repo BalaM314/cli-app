@@ -181,7 +181,7 @@ Usage: ${this.name} [command] [options]
      * @param options Used for testing.
      */
     run(args, options) {
-        this.sourceDirectory = fs.realpathSync(path.join(args[1], ".."));
+        this.sourceDirectory = path.join(fs.realpathSync(args[1]), "..");
         let parsedArgs = Application.parseArgs(args);
         let command;
         let { positionalArgs } = parsedArgs;
