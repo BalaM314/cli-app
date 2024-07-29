@@ -1,4 +1,5 @@
 import * as path from "path";
+import * as fs from "fs";
 import { ApplicationError, StringBuilder } from "./classes.js";
 /**
  * Represents an entire application, with multiple subcommands and various functionality.
@@ -171,7 +172,7 @@ Usage: ${this.name} [command] [options]
      * @param options Used for testing.
      */
     run(args, options) {
-        this.sourceDirectory = path.join(args[1], "..");
+        this.sourceDirectory = fs.realpathSync(path.join(args[1], ".."));
         let parsedArgs = Application.parseArgs(args);
         let command;
         let { positionalArgs } = parsedArgs;

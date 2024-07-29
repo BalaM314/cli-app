@@ -9,6 +9,7 @@ Contains the code for the Application class, which represents a command-line app
 */
 
 import * as path from "path";
+import * as fs from "fs";
 import { ApplicationError, StringBuilder } from "./classes.js";
 import type { Script } from "./Script.js";
 import type { ArgOptions, CommandHandler, FilledArgOptions, SpecificOptions } from "./types.js";
@@ -211,7 +212,7 @@ Usage: ${this.name} [command] [options]
 	 * @param options Used for testing.
 	 */
 	run(args:string[], options?:{ throwOnError?:boolean }){
-		this.sourceDirectory = path.join(args[1], "..");
+		this.sourceDirectory = fs.realpathSync(path.join(args[1], ".."));
 		let parsedArgs = Application.parseArgs(args);
 		let command:Subcommand<Application, ArgOptions> | undefined;
 		let { positionalArgs } = parsedArgs;
