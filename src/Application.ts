@@ -212,7 +212,7 @@ Usage: ${this.name} [command] [options]
 	 * @param options Used for testing.
 	 */
 	run(args:string[], options?:{ throwOnError?:boolean }){
-		this.sourceDirectory = fs.realpathSync(path.join(args[1], ".."));
+		this.sourceDirectory = path.join(fs.realpathSync(args[1]), "..");
 		let parsedArgs = Application.parseArgs(args);
 		let command:Subcommand<Application, ArgOptions> | undefined;
 		let { positionalArgs } = parsedArgs;
