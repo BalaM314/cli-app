@@ -8,8 +8,8 @@ You should have received a copy of the GNU Lesser General Public License along w
 Contains type definitions.
 */
 
-import { Application } from "./Application";
-import { Script } from "./Script";
+import type { Application } from "./Application.js";
+import type { Script } from "./Script.js";
 
 /**Options that are passed to a subcommand handler. */
 export interface SpecificOptions<Opts extends Partial<ArgOptions>> {
