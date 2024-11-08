@@ -152,12 +152,12 @@ Usage: ${this.name} [command] [options]
                 commands.push(arg, ...args);
                 break;
             }
-            else if (arg.match(/^--?([\s\S]+?)=([\s\S]+?)$/)) { //--name=value form
-                const [, name, value] = arg.match(/^--?([\s\S]+?)=([\s\S]+?)$/);
+            else if (arg.match(/^--([\s\S]+?)=([\s\S]+?)$/)) { //--name=value form
+                const [, name, value] = arg.match(/^--([\s\S]+?)=([\s\S]+?)$/);
                 parameters[name] = value;
             }
-            else if (arg.match(/^--?([\s\S]+)/)) { //Starts with one or two hyphes
-                const argName = arg.match(/^--?([\s\S]+)/)[1];
+            else if (arg.match(/^--([\s\S]+)/)) { //Starts with two hyphens
+                const argName = arg.match(/^--([\s\S]+)/)[1];
                 if (args[0]?.startsWith("-") || valuelessOptions.includes(argName)) {
                     //If the next arg also starts with a hyphen, or the arg name is valueless, set it to null
                     parameters[argName] = null;
@@ -165,6 +165,25 @@ Usage: ${this.name} [command] [options]
                 else {
                     //Otherwise, pop off the first arg and set it to that
                     parameters[argName] = args.shift() ?? null;
+                }
+            }
+            else if (arg.match(/^-(\w+)/)) { //Starts with one hyphen
+                const argName = arg.match(/^-(\w+)/)[1];
+                //Compound arg form:
+                //iftop -nPNi eth0 means
+                //iftop -n -P -N -i eth0
+                const shortArgs = [...argName];
+                const lastShortArg = shortArgs.pop(); //\w+ means at least one character must have matched
+                if (args[0]?.startsWith("-") || valuelessOptions.includes(lastShortArg)) {
+                    //If the next arg also starts with a hyphen, or the arg name is valueless, set it to null
+                    parameters[lastShortArg] = null;
+                }
+                else {
+                    //Otherwise, pop off the first arg and set it to that
+                    parameters[lastShortArg] = args.shift() ?? null;
+                }
+                for (const arg of shortArgs) {
+                    parameters[arg] = null;
                 }
             }
             else {

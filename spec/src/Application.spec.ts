@@ -9,6 +9,7 @@ Contains unit tests for Application.
 */
 
 import path from "node:path";
+import type fs from "node:fs";
 import { Application } from "../../build/Application.js";
 import { ApplicationError } from "../../build/classes.js";
 
@@ -255,8 +256,7 @@ describe("Application", () => {
 		});
 		
 		spyOn(app.commands["cmd1"]!, "handler");
-		// @ts-expect-error accessing private property
-		app["fs_realpathSync"] = (path:string) => path;
+		app["fs_realpathSync"] = ((path:string) => path) as typeof fs.realpathSync;
 		app.run(["node", `C:\\amogus\\sussy\\src\\index.js`, `cmd1`], {throwOnError: true});
 		expect(app.commands["cmd1"]!.handler).toHaveBeenCalledWith(jasmine.anything(), jasmine.objectContaining({
 			sourceDirectory: jasmine.stringMatching(/C:[/\\]amogus[/\\]sussy[/\\]src[/\\]?/)
@@ -340,11 +340,24 @@ describe("Application.parseArgs", () => {
 			positionalArgs: ["baka"],
 		});
 	});
-	it("should accept named arguments with one hyphen", () => {
-		expect(Application.parseArgs(runWith(["-s", "baka", "-amogus", "sus"]))).toEqual({
+	it("should accept single character named arguments with one hyphen", () => {
+		expect(Application.parseArgs(runWith(["-s", "baka", "-a", "sus"]))).toEqual({
 			namedArgs: {
 				s: "baka",
-				amogus: "sus",
+				a: "sus",
+			},
+			positionalArgs: [],
+		});
+	});
+	it("should accept single character named arguments with one hyphen", () => {
+		expect(Application.parseArgs(runWith(["-amo", "baka", "-gus", "sus"]))).toEqual({
+			namedArgs: {
+				a: null,
+				m: null,
+				o: "baka",
+				g: null,
+				u: null,
+				s: "sus",
 			},
 			positionalArgs: [],
 		});
@@ -357,11 +370,21 @@ describe("Application.parseArgs", () => {
 			positionalArgs: ["pos", "--", "sus", "--amogus"],
 		});
 	});
+	it("should accept the --name=value arg form", () => {
+		expect(Application.parseArgs(runWith(["sus", "--sussy=baka", "amogus", "--amoma"]))).toEqual({
+			namedArgs: {
+				sussy: "baka",
+				amoma: null,
+			},
+			positionalArgs: ["sus", "amogus"],
+		});
+	});
 	it("should do all of the above", () => {
-		expect(Application.parseArgs(runWith(["p1", "--n1", "v1", "p2", "p3", "-n2", "p4", "--n-3", "v-2", "--n4", "--n5", "v3", "p5"]), ["sussy", "n2"])).toEqual({
+		expect(Application.parseArgs(runWith(["p1", "--n1", "v1", "p2", "p3", "-n2", "p4", "--n-3", "v-2", "--n4", "--n5", "v3", "p5"]), ["sussy", "2"])).toEqual({
 			namedArgs: {
 				n1: "v1",
-				n2: null,
+				n: null,
+				"2": null,
 				"n-3": "v-2",
 				n4: null,
 				n5: "v3",
