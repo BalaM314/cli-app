@@ -6,10 +6,6 @@ cli-app is distributed in the hope that it will be useful, but WITHOUT ANY WARRA
 You should have received a copy of the GNU Lesser General Public License along with cli-app. If not, see <https://www.gnu.org/licenses/>.
 
 */
-import "./types.js";
-import "./classes.js";
-import "./Application.js";
-import "./Script.js";
 export * from "./types.js";
 export * from "./classes.js";
 export * from "./Application.js";

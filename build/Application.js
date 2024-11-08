@@ -60,8 +60,8 @@ export class Application {
             throw new ApplicationError("application.runHelpCommand was bound incorrectly. This is most likely an error with cli-app.");
         }
         if (opts.positionalArgs[0]) {
-            let commandName = this.commands[opts.positionalArgs[0]] ? opts.positionalArgs[0] : this.aliases[opts.positionalArgs[0]] ?? opts.positionalArgs[0];
-            let command = this.commands[commandName];
+            const commandName = this.commands[opts.positionalArgs[0]] ? opts.positionalArgs[0] : this.aliases[opts.positionalArgs[0]] ?? opts.positionalArgs[0];
+            const command = this.commands[commandName];
             if (command) {
                 const aliases = Object.entries(this.aliases).filter(([alias, name]) => name == commandName).map(([alias, name]) => alias);
                 const positionalArgsFragment = command.argOptions.positionalArgs.map(opt => opt.required ? `<${opt.name}>` : `[<${opt.name}>]`).join(" ");
@@ -98,7 +98,7 @@ export class Application {
 Usage: ${this.name} [command] [options]
 	List of all commands:
 `);
-            for (let command of Object.values(this.commands)) {
+            for (const command of Object.values(this.commands)) {
                 console.log(`\t${command?.name}: ${command?.description}`);
             }
         }
@@ -107,9 +107,9 @@ Usage: ${this.name} [command] [options]
     static splitLineIntoArguments(line) {
         if (line.includes(`"`)) {
             //aaaaaaaaaaaaaaaaa
-            let replacementLine = [];
+            const replacementLine = [];
             let isInString = false;
-            for (let char of line) {
+            for (const char of line) {
                 if (char == `"`) {
                     isInString = !isInString;
                 }
@@ -133,18 +133,18 @@ Usage: ${this.name} [command] [options]
      * @returns Formatted args.
      */
     static parseArgs(providedArgs, valuelessOptions = []) {
-        let parameters = {};
-        let commands = [];
+        const parameters = {};
+        const commands = [];
         let i = 0;
         if (!providedArgs[0]?.includes("node")) {
             throw new ApplicationError("Attempted to parse invalid args. Unless you are running this application in a strange way, this is likely an error with the application.");
         }
-        let args = providedArgs.slice(2);
+        const args = providedArgs.slice(2);
         while (true) {
             i++;
             if (i > 1000)
                 throw new ApplicationError("Too many arguments!");
-            let arg = args.shift(); //Grab the first arg
+            const arg = args.shift(); //Grab the first arg
             if (arg == undefined)
                 break; //If it doesn't exist, return
             if (arg == "--") { //Arg separator
@@ -184,9 +184,9 @@ Usage: ${this.name} [command] [options]
      */
     run(args, options) {
         this.sourceDirectory = path.join(this.fs_realpathSync(args[1]), "..");
-        let parsedArgs = Application.parseArgs(args);
+        const parsedArgs = Application.parseArgs(args);
         let command;
-        let { positionalArgs } = parsedArgs;
+        const { positionalArgs } = parsedArgs;
         if ("help" in parsedArgs.namedArgs) {
             command = this.commands["help"];
         }
@@ -272,7 +272,7 @@ export class Subcommand {
         }
         //Make sure positional arg options are valid
         let optionalArgsStarted = false;
-        for (let arg of this.argOptions.positionalArgs) {
+        for (const arg of this.argOptions.positionalArgs) {
             if (optionalArgsStarted && (arg.required || arg.default))
                 throw new Error(`cli-app configuration error in subcommand ${name}: Required positional arguments, or ones with a default value, cannot follow optional ones.`);
             if (!(arg.required || arg.default))

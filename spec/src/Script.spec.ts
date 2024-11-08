@@ -8,7 +8,7 @@ You should have received a copy of the GNU Lesser General Public License along w
 Contains unit tests for Script.
 */
 
-import * as path from "path";
+import path from "node:path";
 import { Script } from "../../build/Script.js";
 import { ApplicationError } from "../../build/classes.js";
 

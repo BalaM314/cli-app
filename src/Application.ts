@@ -80,8 +80,8 @@ export class Application {
 			throw new ApplicationError("application.runHelpCommand was bound incorrectly. This is most likely an error with cli-app.");
 		}
 		if(opts.positionalArgs[0]){
-			let commandName = this.commands[opts.positionalArgs[0]] ? opts.positionalArgs[0] : this.aliases[opts.positionalArgs[0]] ?? opts.positionalArgs[0];
-			let command = this.commands[commandName];
+			const commandName = this.commands[opts.positionalArgs[0]] ? opts.positionalArgs[0] : this.aliases[opts.positionalArgs[0]] ?? opts.positionalArgs[0];
+			const command = this.commands[commandName];
 			if(command){
 				const aliases = Object.entries(this.aliases).filter(([alias, name]) => name == commandName).map(([alias, name]) => alias);
 				const positionalArgsFragment =
@@ -94,28 +94,28 @@ export class Application {
 							opt.required ? `--${name}${opt.needsValue ? ` <${name}>` : ``}` : `[--${name}${opt.needsValue ? ` <${name}>` : ``}]`
 						).join(" ");
 				const outputText = new StringBuilder()
-				.addLine()
-				.addLine(`Help for command ${command.name}:`)
+					.addLine()
+					.addLine(`Help for command ${command.name}:`)
 
-				.add(`Usage: ${this.name} ${command.name}`)
-				.addWord(positionalArgsFragment)
-				.addWord(namedArgsFragment)
-				.add("\n")
-				.addLine();
+					.add(`Usage: ${this.name} ${command.name}`)
+					.addWord(positionalArgsFragment)
+					.addWord(namedArgsFragment)
+					.add("\n")
+					.addLine();
 
 				if(Object.entries(command.argOptions.namedArgs).length != 0){
 					Object.entries(command.argOptions.namedArgs)
-					.map(([name, opt]) =>
-					`<${name}>: ${opt.description}`
-					).forEach(line => outputText.addLine(line));
+						.map(([name, opt]) =>
+							`<${name}>: ${opt.description}`
+						).forEach(line => outputText.addLine(line));
 					outputText.addLine();
 				}
 
 				if(command.argOptions.positionalArgs.length != 0){
 					command.argOptions.positionalArgs
-					.map((opt) =>
-					`<${opt.name}>: ${opt.description}`
-					).forEach(line => outputText.addLine(line));
+						.map((opt) =>
+							`<${opt.name}>: ${opt.description}`
+						).forEach(line => outputText.addLine(line));
 					outputText.addLine();
 				}
 
@@ -132,7 +132,7 @@ Usage: ${this.name} [command] [options]
 	List of all commands:
 `
 			);
-			for(let command of Object.values(this.commands)){
+			for(const command of Object.values(this.commands)){
 				console.log(`\t${command?.name}: ${command?.description}`);
 			}
 
@@ -143,9 +143,9 @@ Usage: ${this.name} [command] [options]
 	static splitLineIntoArguments(line:string):string[] {
 		if(line.includes(`"`)){
 			//aaaaaaaaaaaaaaaaa
-			let replacementLine = [];
+			const replacementLine = [];
 			let isInString = false;
-			for(let char of line){
+			for(const char of line){
 				if(char == `"`){
 					isInString = !isInString;
 				}
@@ -167,20 +167,20 @@ Usage: ${this.name} [command] [options]
 	 * @returns Formatted args.
 	 */
 	static parseArgs(providedArgs:string[], valuelessOptions:string[] = []):Omit<SpecificOptions<ArgOptions>, "commandName"> {
-		let parameters: {
+		const parameters: {
 			[index: string]: string | null;
 		} = {};
-		let commands:string[] = [];
+		const commands:string[] = [];
 		let i = 0;
 		if(!providedArgs[0]?.includes("node")){
 			throw new ApplicationError("Attempted to parse invalid args. Unless you are running this application in a strange way, this is likely an error with the application.");
 		}
-		let args = providedArgs.slice(2);
+		const args = providedArgs.slice(2);
 		while(true){
 			i++;
 			if(i > 1000) throw new ApplicationError("Too many arguments!");
 
-			let arg = args.shift(); //Grab the first arg
+			const arg = args.shift(); //Grab the first arg
 			if(arg == undefined) break; //If it doesn't exist, return
 			if(arg == "--"){ //Arg separator
 				//Everything else should be considered a positional argument
@@ -215,9 +215,9 @@ Usage: ${this.name} [command] [options]
 	 */
 	run(args:string[], options?:{ throwOnError?:boolean }){
 		this.sourceDirectory = path.join(this.fs_realpathSync(args[1]), "..");
-		let parsedArgs = Application.parseArgs(args);
+		const parsedArgs = Application.parseArgs(args);
 		let command:Subcommand<Application, ArgOptions> | undefined;
-		let { positionalArgs } = parsedArgs;
+		const { positionalArgs } = parsedArgs;
 		if("help" in parsedArgs.namedArgs){
 			command = this.commands["help"]!;
 		} else if(this.commands[parsedArgs.positionalArgs[0]]){
@@ -234,7 +234,7 @@ Usage: ${this.name} [command] [options]
 			//Loop through each named argument passed
 			Object.keys(parsedArgs.namedArgs).forEach(arg => {
 				//If the arg is not in the named arguments or the aliases
-				if(!(arg in command!.argOptions.namedArgs || arg in command!.argOptions.aliases || arg == "help" || arg == "?"))
+				if(!(arg in command.argOptions.namedArgs || arg in command.argOptions.aliases || arg == "help" || arg == "?"))
 					//Display a warning
 					console.warn(`Unknown argument ${arg}`);
 			});
@@ -242,8 +242,7 @@ Usage: ${this.name} [command] [options]
 			try {
 				command.run({
 					namedArgs: {
-						...Object.fromEntries(
-							Object.entries(parsedArgs.namedArgs)
+						...Object.fromEntries(Object.entries(parsedArgs.namedArgs)
 							.map(([name, value]) =>
 								[command?.argOptions.aliases?.[name] ?? name, value]
 							)
@@ -255,7 +254,7 @@ Usage: ${this.name} [command] [options]
 			} catch(err){
 				if(options?.throwOnError) throw err;
 				if(err instanceof ApplicationError){
-					console.error(`Error: ${err.message}`)
+					console.error(`Error: ${err.message}`);
 				} else {
 					console.error("The command encountered an unhandled runtime error.");
 					console.error(err);
@@ -312,7 +311,7 @@ export class Subcommand<App extends Application | Script<ArgOptions>, A extends 
 
 		//Make sure positional arg options are valid
 		let optionalArgsStarted = false;
-		for(let arg of this.argOptions.positionalArgs){
+		for(const arg of this.argOptions.positionalArgs){
 			if(optionalArgsStarted && (arg.required || arg.default)) throw new Error(`cli-app configuration error in subcommand ${name}: Required positional arguments, or ones with a default value, cannot follow optional ones.`);
 			if(!(arg.required || arg.default)) optionalArgsStarted = true;
 		}

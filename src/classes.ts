@@ -22,7 +22,7 @@ export class StringBuilder {
 
 	add(message:string):StringBuilder;
 	add(condition:boolean, message:string):StringBuilder;
-	add(arg1:any, arg2?:any){
+	add(arg1:string | boolean, arg2?:string){
 		if(typeof arg1 == "string"){
 			this.buffer += arg1;
 		} else if(arg1){
@@ -33,7 +33,7 @@ export class StringBuilder {
 
 	addWord(message:string):StringBuilder;
 	addWord(condition:boolean, message:string):StringBuilder;
-	addWord(arg1:any, arg2?:any){
+	addWord(arg1:string | boolean, arg2?:string){
 		if(typeof arg1 == "string" && arg1.length != 0){
 			this.buffer += " ";
 			this.buffer += arg1;
@@ -47,7 +47,7 @@ export class StringBuilder {
 	addLine():StringBuilder;
 	addLine(message:string):StringBuilder;
 	addLine(condition:boolean, message:string):StringBuilder;
-	addLine(arg1?:any, arg2?:any){
+	addLine(arg1?:string | boolean, arg2?:string){
 		if(arg1 == undefined){
 			this.buffer += "\n";
 		} else if(typeof arg1 == "string"){

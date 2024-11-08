@@ -8,7 +8,7 @@ You should have received a copy of the GNU Lesser General Public License along w
 Contains the code for the Script class, which represents an application that does one thing only.
 */
 
-import * as path from "path";
+import path from "node:path";
 import { Application, Subcommand } from "./Application.js";
 import { ApplicationError, StringBuilder } from "./classes.js";
 import { ArgOptions, CommandHandler, SpecificOptions } from "./types.js";
@@ -66,28 +66,28 @@ export class Script<A extends Partial<ArgOptions>> {
 					opt.required ? `--${name}${opt.needsValue ? ` <${name}>` : ""}` : `[--${name}${opt.needsValue ? ` <${name}>` : ``}]`
 				).join(" ");
 		const outputText = new StringBuilder()
-		.addLine()
-		.addLine(`Help for ${this.name}:`)
+			.addLine()
+			.addLine(`Help for ${this.name}:`)
 
-		.add(`Usage: ${this.name}`)
-		.addWord(positionalArgsFragment)
-		.addWord(namedArgsFragment)
-		.add("\n")
-		.addLine();
+			.add(`Usage: ${this.name}`)
+			.addWord(positionalArgsFragment)
+			.addWord(namedArgsFragment)
+			.add("\n")
+			.addLine();
 
 		if(Object.entries(this.defaultCommand.argOptions.namedArgs).length != 0){
 			Object.entries(this.defaultCommand.argOptions.namedArgs)
-			.map(([name, opt]) =>
-			`<${name}>: ${opt.description}`
-			).forEach(line => outputText.addLine(line));
+				.map(([name, opt]) =>
+					`<${name}>: ${opt.description}`
+				).forEach(line => outputText.addLine(line));
 			outputText.addLine();
 		}
 
 		if(this.defaultCommand.argOptions.positionalArgs.length != 0){
 			this.defaultCommand.argOptions.positionalArgs
-			.map((opt) =>
-			`<${opt.name}>: ${opt.description}`
-			).forEach(line => outputText.addLine(line));
+				.map((opt) =>
+					`<${opt.name}>: ${opt.description}`
+				).forEach(line => outputText.addLine(line));
 			outputText.addLine();
 		}
 
@@ -101,7 +101,7 @@ export class Script<A extends Partial<ArgOptions>> {
 	 */
 	run(args:string[], options?:{ throwOnError?:boolean }){
 		this.sourceDirectory = path.join(process.argv[1], "..");
-		let parsedArgs = Application.parseArgs(args, Object.entries(this.defaultCommand.argOptions.namedArgs).filter(([k, v]) => !v.needsValue).map(([k, v]) => v.aliases.concat(k)).flat());
+		const parsedArgs = Application.parseArgs(args, Object.entries(this.defaultCommand.argOptions.namedArgs).filter(([k, v]) => !v.needsValue).map(([k, v]) => v.aliases.concat(k)).flat());
 		let command:Subcommand<this, A>;
 		if("help" in parsedArgs.namedArgs || "?" in parsedArgs.namedArgs){
 			command = this.helpCommand;
@@ -120,8 +120,7 @@ export class Script<A extends Partial<ArgOptions>> {
 		try {
 			command.run({
 				namedArgs: {
-					...Object.fromEntries(
-						Object.entries(parsedArgs.namedArgs)
+					...Object.fromEntries(Object.entries(parsedArgs.namedArgs)
 						.map(([name, value]) =>
 							[command?.argOptions.aliases?.[name] ?? name, value]
 						)
@@ -133,7 +132,7 @@ export class Script<A extends Partial<ArgOptions>> {
 		} catch(err){
 			if(options?.throwOnError) throw err;
 			if(err instanceof ApplicationError){
-				console.error(`Error: ${err.message}`)
+				console.error(`Error: ${err.message}`);
 			} else {
 				console.error("The command encountered an unhandled runtime error.");
 				console.error(err);

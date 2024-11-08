@@ -7,7 +7,7 @@ You should have received a copy of the GNU Lesser General Public License along w
 
 Contains the code for the Script class, which represents an application that does one thing only.
 */
-import * as path from "path";
+import path from "node:path";
 import { Application, Subcommand } from "./Application.js";
 import { ApplicationError, StringBuilder } from "./classes.js";
 /**
@@ -66,7 +66,7 @@ export class Script {
      */
     run(args, options) {
         this.sourceDirectory = path.join(process.argv[1], "..");
-        let parsedArgs = Application.parseArgs(args, Object.entries(this.defaultCommand.argOptions.namedArgs).filter(([k, v]) => !v.needsValue).map(([k, v]) => v.aliases.concat(k)).flat());
+        const parsedArgs = Application.parseArgs(args, Object.entries(this.defaultCommand.argOptions.namedArgs).filter(([k, v]) => !v.needsValue).map(([k, v]) => v.aliases.concat(k)).flat());
         let command;
         if ("help" in parsedArgs.namedArgs || "?" in parsedArgs.namedArgs) {
             command = this.helpCommand;

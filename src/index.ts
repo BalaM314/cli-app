@@ -7,10 +7,6 @@ You should have received a copy of the GNU Lesser General Public License along w
 
 */
 
-import "./types.js";
-import "./classes.js";
-import "./Application.js";
-import "./Script.js";
 export * from "./types.js";
 export * from "./classes.js";
 export * from "./Application.js";

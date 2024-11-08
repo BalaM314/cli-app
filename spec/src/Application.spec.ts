@@ -9,7 +9,6 @@ Contains unit tests for Application.
 */
 
 import path from "node:path";
-import fs from "node:fs";
 import { Application } from "../../build/Application.js";
 import { ApplicationError } from "../../build/classes.js";
 
@@ -256,8 +255,8 @@ describe("Application", () => {
 		});
 		
 		spyOn(app.commands["cmd1"]!, "handler");
-		// @ts-expect-error
-		app["fs_realpathSync"] = path => path;
+		// @ts-expect-error accessing private property
+		app["fs_realpathSync"] = (path:string) => path;
 		app.run(["node", `C:\\amogus\\sussy\\src\\index.js`, `cmd1`], {throwOnError: true});
 		expect(app.commands["cmd1"]!.handler).toHaveBeenCalledWith(jasmine.anything(), jasmine.objectContaining({
 			sourceDirectory: jasmine.stringMatching(/C:[/\\]amogus[/\\]sussy[/\\]src[/\\]?/)
