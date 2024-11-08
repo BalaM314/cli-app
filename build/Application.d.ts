@@ -1,5 +1,5 @@
 import type { Script } from "./Script.js";
-import type { ArgOptions, CommandHandler, FilledArgOptions, SpecificOptions } from "./types.js";
+import type { ApplicationRunOptions, ArgOptions, CommandHandler, FilledArgOptions, SpecificOptions } from "./types.js";
 /**
  * Represents an entire application, with multiple subcommands and various functionality.
  */
@@ -22,6 +22,9 @@ export declare class Application {
     /**
      * Adds a subcommand to this application.
      * @param handler The function that is called when this subcommand is run.
+     * Return value handling:
+     * - If the function returns an exit code (sync or async), the app will be closed immediately with that exit code.
+     * - If the function returns undefined (sync or async), cli-app will do nothing, and NodeJS's standard behavior will occur.
      * @param argOptions Specifies the args that can be passed to this subcommand through the command line.
      * @param aliases List of alternative names for this command.
      */
@@ -51,9 +54,7 @@ export declare class Application {
      * @param args Pass process.argv without modifying it.
      * @param options Used for testing.
      */
-    run(args: string[], options?: {
-        throwOnError?: boolean;
-    }): void;
+    run(args: string[], options?: ApplicationRunOptions): Promise<void>;
 }
 /**
  * Represents one subcommand of an application or script.
@@ -71,5 +72,5 @@ export declare class Subcommand<App extends Application | Script<ArgOptions>, A 
     /**
      * Runs this subcommand.
      */
-    run(options: SpecificOptions<ArgOptions>, application: App): void;
+    run(options: SpecificOptions<ArgOptions>, application: App): number | void | Promise<number | void>;
 }

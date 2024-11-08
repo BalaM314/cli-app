@@ -12,7 +12,7 @@ import path from "node:path";
 import fs from "node:fs";
 import { ApplicationError, StringBuilder } from "./classes.js";
 import type { Script } from "./Script.js";
-import type { ArgOptions, CommandHandler, FilledArgOptions, NamedArgOptions, RequiredRecursive, SpecificOptions } from "./types.js";
+import type { ApplicationRunOptions, ArgOptions, CommandHandler, FilledArgOptions, NamedArgOptions, RequiredRecursive, SpecificOptions } from "./types.js";
 
 
 /**
@@ -50,6 +50,9 @@ export class Application {
 	/**
 	 * Adds a subcommand to this application.
 	 * @param handler The function that is called when this subcommand is run.
+	 * Return value handling:
+	 * - If the function returns an exit code (sync or async), the app will be closed immediately with that exit code.
+	 * - If the function returns undefined (sync or async), cli-app will do nothing, and NodeJS's standard behavior will occur.
 	 * @param argOptions Specifies the args that can be passed to this subcommand through the command line.
 	 * @param aliases List of alternative names for this command.
 	 */
@@ -230,7 +233,7 @@ Usage: ${this.name} [command] [options]
 	 * @param args Pass process.argv without modifying it.
 	 * @param options Used for testing.
 	 */
-	run(args:string[], options?:{ throwOnError?:boolean }){
+	async run(args:string[], options?:ApplicationRunOptions){
 		this.sourceDirectory = path.join(this.fs_realpathSync(args[1]), "..");
 		const parsedArgs = Application.parseArgs(args);
 		let command:Subcommand<Application, ArgOptions> | undefined;
@@ -257,7 +260,7 @@ Usage: ${this.name} [command] [options]
 			});
 
 			try {
-				command.run({
+				const result = await command.run({
 					namedArgs: {
 						...Object.fromEntries(Object.entries(parsedArgs.namedArgs)
 							.map(([name, value]) =>
@@ -268,6 +271,10 @@ Usage: ${this.name} [command] [options]
 					positionalArgs: positionalArgs,
 					commandName: command.name
 				}, this);
+				if(typeof result == "number"){
+					if(options?.exitProcessOnHandlerReturn) process.exit(result);
+					else if(result != 0) throw new Error(`Non-zero exit code: ${result}`);
+				}
 			} catch(err){
 				if(options?.throwOnError) throw err;
 				if(err instanceof ApplicationError){
@@ -380,9 +387,9 @@ export class Subcommand<App extends Application | Script<ArgOptions>, A extends 
 			}
 		}
 
-		this.handler({
+		return this.handler({
 			...options
-		}, application as never);
+		}, application);
 	}
 }
 

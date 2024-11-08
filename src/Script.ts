@@ -9,9 +9,10 @@ Contains the code for the Script class, which represents an application that doe
 */
 
 import path from "node:path";
+import fs from "node:fs";
 import { Application, Subcommand } from "./Application.js";
 import { ApplicationError, StringBuilder } from "./classes.js";
-import { ArgOptions, CommandHandler, SpecificOptions } from "./types.js";
+import { ApplicationRunOptions, ArgOptions, CommandHandler, SpecificOptions } from "./types.js";
 
 
 /**
@@ -99,8 +100,8 @@ export class Script<A extends Partial<ArgOptions>> {
 	 * @param args Pass process.argv without modifying it.
 	 * @param options Used for testing.
 	 */
-	run(args:string[], options?:{ throwOnError?:boolean }){
-		this.sourceDirectory = path.join(process.argv[1], "..");
+	run(args:string[], options?:ApplicationRunOptions){
+		this.sourceDirectory = path.join(fs.realpathSync(args[1]), "..");
 		const parsedArgs = Application.parseArgs(args, Object.entries(this.defaultCommand.argOptions.namedArgs).filter(([k, v]) => !v.needsValue).map(([k, v]) => v.aliases.concat(k)).flat());
 		let command:Subcommand<this, A>;
 		if("help" in parsedArgs.namedArgs || "?" in parsedArgs.namedArgs){
@@ -118,7 +119,7 @@ export class Script<A extends Partial<ArgOptions>> {
 		);
 
 		try {
-			command.run({
+			const result = command.run({
 				namedArgs: {
 					...Object.fromEntries(Object.entries(parsedArgs.namedArgs)
 						.map(([name, value]) =>
@@ -129,6 +130,10 @@ export class Script<A extends Partial<ArgOptions>> {
 				positionalArgs: parsedArgs.positionalArgs,
 				commandName: command.name
 			}, this);
+			if(typeof result == "number"){
+				if(options?.exitProcessOnHandlerReturn) process.exit(result);
+				else if(result != 0) throw new Error(`Non-zero exit code: ${result}`);
+			}
 		} catch(err){
 			if(options?.throwOnError) throw err;
 			if(err instanceof ApplicationError){

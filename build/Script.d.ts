@@ -1,5 +1,5 @@
 import { Subcommand } from "./Application.js";
-import { ArgOptions, CommandHandler, SpecificOptions } from "./types.js";
+import { ApplicationRunOptions, ArgOptions, CommandHandler, SpecificOptions } from "./types.js";
 /**
  * Represents an application that does one thing only.
  */
@@ -27,7 +27,5 @@ export declare class Script<A extends Partial<ArgOptions>> {
      * @param args Pass process.argv without modifying it.
      * @param options Used for testing.
      */
-    run(args: string[], options?: {
-        throwOnError?: boolean;
-    }): void;
+    run(args: string[], options?: ApplicationRunOptions): void;
 }

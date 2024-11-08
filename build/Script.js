@@ -8,6 +8,7 @@ You should have received a copy of the GNU Lesser General Public License along w
 Contains the code for the Script class, which represents an application that does one thing only.
 */
 import path from "node:path";
+import fs from "node:fs";
 import { Application, Subcommand } from "./Application.js";
 import { ApplicationError, StringBuilder } from "./classes.js";
 /**
@@ -65,7 +66,7 @@ export class Script {
      * @param options Used for testing.
      */
     run(args, options) {
-        this.sourceDirectory = path.join(process.argv[1], "..");
+        this.sourceDirectory = path.join(fs.realpathSync(args[1]), "..");
         const parsedArgs = Application.parseArgs(args, Object.entries(this.defaultCommand.argOptions.namedArgs).filter(([k, v]) => !v.needsValue).map(([k, v]) => v.aliases.concat(k)).flat());
         let command;
         if ("help" in parsedArgs.namedArgs || "?" in parsedArgs.namedArgs) {
@@ -81,7 +82,7 @@ export class Script {
             //Display a warning
             console.warn(`Unknown argument ${arg}`));
         try {
-            command.run({
+            const result = command.run({
                 namedArgs: {
                     ...Object.fromEntries(Object.entries(parsedArgs.namedArgs)
                         .map(([name, value]) => [command?.argOptions.aliases?.[name] ?? name, value]))
@@ -89,6 +90,12 @@ export class Script {
                 positionalArgs: parsedArgs.positionalArgs,
                 commandName: command.name
             }, this);
+            if (typeof result == "number") {
+                if (options?.exitProcessOnHandlerReturn)
+                    process.exit(result);
+                else if (result != 0)
+                    throw new Error(`Non-zero exit code: ${result}`);
+            }
         }
         catch (err) {
             if (options?.throwOnError)

@@ -77,4 +77,21 @@ export interface PositionalArgOptions {
 	/**A default value for the argument. */
 	default?: string | null;
 }
-export type CommandHandler<App extends Application | Script<ArgOptions>, A extends Partial<ArgOptions>> = (opts:SpecificOptions<A>, application:App) => unknown;
+export type CommandHandler<App extends Application | Script<ArgOptions>, A extends Partial<ArgOptions>> =
+	(opts:SpecificOptions<A>, application:App) => number | void | Promise<number | void>;
+
+export type ApplicationRunOptions = {
+	/**
+	 * If the command handler throws an ApplicationError, normally, this function will catch it and print an error message.
+	 * If this option is set, the error will be immediately rethrown. Useful for writing tests.
+	 * @default false
+	 */
+	throwOnError?: boolean;
+	/**
+	 * If this option is set, {@link process.exit()} will be called when the command handler returns a numeric exit code.
+	 * Otherwise, this function will throw an error if the exit code is non-zero.
+	 * @default true
+	 */
+	exitProcessOnHandlerReturn?: boolean;
+};
+
