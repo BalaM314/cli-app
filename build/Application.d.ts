@@ -54,7 +54,7 @@ export declare class Application {
      * @param args Pass process.argv without modifying it.
      * @param options Used for testing.
      */
-    run(args: string[], options?: ApplicationRunOptions): Promise<void>;
+    run(args: string[], { exitProcessOnHandlerReturn, throwOnError, }?: ApplicationRunOptions): Promise<void>;
 }
 /**
  * Represents one subcommand of an application or script.

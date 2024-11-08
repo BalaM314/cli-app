@@ -204,7 +204,7 @@ Usage: ${this.name} [command] [options]
      * @param args Pass process.argv without modifying it.
      * @param options Used for testing.
      */
-    async run(args, options) {
+    async run(args, { exitProcessOnHandlerReturn = true, throwOnError = false, } = {}) {
         this.sourceDirectory = path.join(this.fs_realpathSync(args[1]), "..");
         const parsedArgs = Application.parseArgs(args);
         let command;
@@ -241,14 +241,14 @@ Usage: ${this.name} [command] [options]
                     commandName: command.name
                 }, this);
                 if (typeof result == "number") {
-                    if (options?.exitProcessOnHandlerReturn)
+                    if (exitProcessOnHandlerReturn)
                         process.exit(result);
                     else if (result != 0)
                         throw new Error(`Non-zero exit code: ${result}`);
                 }
             }
             catch (err) {
-                if (options?.throwOnError)
+                if (throwOnError)
                     throw err;
                 if (err instanceof ApplicationError) {
                     console.error(`Error: ${err.message}`);
