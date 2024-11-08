@@ -8,8 +8,8 @@ You should have received a copy of the GNU Lesser General Public License along w
 Contains the code for the Application class, which represents a command-line application.
 */
 
-import * as path from "path";
-import * as fs from "fs";
+import path from "node:path";
+import fs from "node:fs";
 import { ApplicationError, StringBuilder } from "./classes.js";
 import type { Script } from "./Script.js";
 import type { ArgOptions, CommandHandler, FilledArgOptions, NamedArgOptions, RequiredRecursive, SpecificOptions } from "./types.js";
@@ -27,6 +27,8 @@ export class Application {
 	aliases: {
 		[alias: string]: string;
 	} = {};
+	/** Used for tests. */
+	private fs_realpathSync = fs.realpathSync;
 	/** The directory containing this application's main file. Uses slash or backslash dependent on platform. */
 	sourceDirectory:string;
 	constructor(public name:string, public description:string){
@@ -212,7 +214,7 @@ Usage: ${this.name} [command] [options]
 	 * @param options Used for testing.
 	 */
 	run(args:string[], options?:{ throwOnError?:boolean }){
-		this.sourceDirectory = path.join(fs.realpathSync(args[1]), "..");
+		this.sourceDirectory = path.join(this.fs_realpathSync(args[1]), "..");
 		let parsedArgs = Application.parseArgs(args);
 		let command:Subcommand<Application, ArgOptions> | undefined;
 		let { positionalArgs } = parsedArgs;

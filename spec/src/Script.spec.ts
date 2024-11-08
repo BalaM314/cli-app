@@ -9,8 +9,8 @@ Contains unit tests for Script.
 */
 
 import * as path from "path";
-import { Script } from "../src/Script.js";
-import { ApplicationError } from "../src/classes.js";
+import { Script } from "../../build/Script.js";
+import { ApplicationError } from "../../build/classes.js";
 
 
 

@@ -7,8 +7,8 @@ You should have received a copy of the GNU Lesser General Public License along w
 
 Contains the code for the Application class, which represents a command-line application.
 */
-import * as path from "path";
-import * as fs from "fs";
+import path from "node:path";
+import fs from "node:fs";
 import { ApplicationError, StringBuilder } from "./classes.js";
 /**
  * Represents an entire application, with multiple subcommands and various functionality.
@@ -21,6 +21,8 @@ export class Application {
         this.commands = {};
         /** Stores all command aliases. */
         this.aliases = {};
+        /** Used for tests. */
+        this.fs_realpathSync = fs.realpathSync;
         this.commands["help"] = new Subcommand("help", this.runHelpCommand.bind(this), "Displays help on all commands or a specific subcommand.", {
             positionalArgs: [{
                     name: "command",
@@ -181,7 +183,7 @@ Usage: ${this.name} [command] [options]
      * @param options Used for testing.
      */
     run(args, options) {
-        this.sourceDirectory = path.join(fs.realpathSync(args[1]), "..");
+        this.sourceDirectory = path.join(this.fs_realpathSync(args[1]), "..");
         let parsedArgs = Application.parseArgs(args);
         let command;
         let { positionalArgs } = parsedArgs;
