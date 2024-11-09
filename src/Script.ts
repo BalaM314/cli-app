@@ -116,15 +116,6 @@ export class Script<A extends Partial<ArgOptions>> {
 			command = this.defaultCommand as Subcommand<this, A>;
 		}
 		
-		//Warn on unexpected named arguments
-		Object.keys(parsedArgs.namedArgs).forEach(arg => {
-			if(!(
-				arg in command!.argOptions.namedArgs ||
-				arg in (command!.argOptions.aliases ?? {}) ||
-				arg == "help" || arg == "?"
-			)) console.warn(`Unknown argument ${arg}`);
-		});
-
 		try {
 			const result = await command.run(args, this);
 			if(typeof result == "number"){
