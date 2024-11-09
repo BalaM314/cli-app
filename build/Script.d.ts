@@ -4,8 +4,8 @@ import { ApplicationRunOptions, ArgOptions, CommandHandler, SpecificOptions } fr
  * Represents an application that does one thing only.
  */
 export declare class Script<A extends Partial<ArgOptions>> {
-    defaultCommand: Subcommand<this, ArgOptions>;
-    helpCommand: Subcommand<this, ArgOptions>;
+    defaultCommand: Subcommand<this, any>;
+    helpCommand: Subcommand<this, any>;
     name: string;
     sourceDirectory: string;
     constructor(name: string, description: string, handler: CommandHandler<Script<A>, A>, argOptions?: A);
@@ -24,8 +24,8 @@ export declare class Script<A extends Partial<ArgOptions>> {
     }>): number;
     /**
      * Runs an application.
-     * @param args Pass process.argv without modifying it.
+     * @param rawArgs Pass process.argv without modifying it.
      * @param options Used for testing.
      */
-    run(args: string[], options?: ApplicationRunOptions): void;
+    run(rawArgs: readonly string[], options?: ApplicationRunOptions): Promise<void>;
 }

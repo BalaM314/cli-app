@@ -19,8 +19,8 @@ import { ApplicationRunOptions, ArgOptions, CommandHandler, SpecificOptions } fr
  * Represents an application that does one thing only.
  */
 export class Script<A extends Partial<ArgOptions>> {
-	defaultCommand:Subcommand<this, ArgOptions>;
-	helpCommand:Subcommand<this, ArgOptions>;
+	defaultCommand:Subcommand<this, any>;
+	helpCommand:Subcommand<this, any>;
 	name: string;
 	sourceDirectory:string;
 	constructor(name:string, description:string, handler:CommandHandler<Script<A>, A>, argOptions?:A){
@@ -32,7 +32,7 @@ export class Script<A extends Partial<ArgOptions>> {
 				positionalArgs: [{
 					name: "command",
 					description: "The command to get help on.",
-					required: false
+					optional: true
 				}],
 				namedArgs: {}
 			}
@@ -59,12 +59,14 @@ export class Script<A extends Partial<ArgOptions>> {
 		
 		const positionalArgsFragment =
 			this.defaultCommand.argOptions.positionalArgs.map(opt =>
-				opt.required ? `<${opt.name}>` : `[<${opt.name}>]`
+				opt.optional ? `[<${opt.name}>]` : `<${opt.name}>`
 			).join(" ");
 		const namedArgsFragment =
 			Object.entries(this.defaultCommand.argOptions.namedArgs)
 				.map(([name, opt]) =>
-					opt.required ? `--${name}${opt.needsValue ? ` <${name}>` : ""}` : `[--${name}${opt.needsValue ? ` <${name}>` : ``}]`
+					opt.optional ?
+						`[--${name}${opt.valueless ? `` : ` <${name}>`}]`
+					: `--${name}${opt.valueless ? "" : ` <${name}>`}`
 				).join(" ");
 		const outputText = new StringBuilder()
 			.addLine()
@@ -97,39 +99,34 @@ export class Script<A extends Partial<ArgOptions>> {
 	}
 	/**
 	 * Runs an application.
-	 * @param args Pass process.argv without modifying it.
+	 * @param rawArgs Pass process.argv without modifying it.
 	 * @param options Used for testing.
 	 */
-	run(args:string[], options?:ApplicationRunOptions){
-		this.sourceDirectory = path.join(fs.realpathSync(args[1]), "..");
-		const parsedArgs = Application.parseArgs(args, Object.entries(this.defaultCommand.argOptions.namedArgs).filter(([k, v]) => !v.needsValue).map(([k, v]) => v.aliases.concat(k)).flat());
+	async run(rawArgs:readonly string[], options?:ApplicationRunOptions):Promise<void> {
+		this.sourceDirectory = path.join(fs.realpathSync(rawArgs[1]), "..");
+
+
+		const args = rawArgs.slice(2);
+		const parsedArgs = Application.parseArgs(args);
+
 		let command:Subcommand<this, A>;
 		if("help" in parsedArgs.namedArgs || "?" in parsedArgs.namedArgs){
-			command = this.helpCommand;
+			command = this.helpCommand as Subcommand<this, A>;
 		} else {
-			command = this.defaultCommand;
+			command = this.defaultCommand as Subcommand<this, A>;
 		}
 		
-		//Loop through each named argument passed
-		Object.keys(parsedArgs.namedArgs).forEach(arg =>
-			//If the arg is not in the named arguments or the aliases
-			(arg in command!.argOptions.namedArgs || arg in (command!.argOptions.aliases ?? {}) || arg == "help" || arg == "?") ? "" :
-				//Display a warning
-				console.warn(`Unknown argument ${arg}`)
-		);
+		//Warn on unexpected named arguments
+		Object.keys(parsedArgs.namedArgs).forEach(arg => {
+			if(!(
+				arg in command!.argOptions.namedArgs ||
+				arg in (command!.argOptions.aliases ?? {}) ||
+				arg == "help" || arg == "?"
+			)) console.warn(`Unknown argument ${arg}`);
+		});
 
 		try {
-			const result = command.run({
-				namedArgs: {
-					...Object.fromEntries(Object.entries(parsedArgs.namedArgs)
-						.map(([name, value]) =>
-							[command?.argOptions.aliases?.[name] ?? name, value]
-						)
-					)
-				},
-				positionalArgs: parsedArgs.positionalArgs,
-				commandName: command.name
-			}, this);
+			const result = await command.run(args, this);
 			if(typeof result == "number"){
 				if(options?.exitProcessOnHandlerReturn) process.exit(result);
 				else if(result != 0) throw new Error(`Non-zero exit code: ${result}`);

@@ -10,26 +10,29 @@ Contains the code for the Application class, which represents a command-line app
 import path from "node:path";
 import fs from "node:fs";
 import { ApplicationError, StringBuilder } from "./classes.js";
+import { crash, invalidConfig } from "./funcs.js";
 /**
  * Represents an entire application, with multiple subcommands and various functionality.
  */
 export class Application {
-    constructor(name, description) {
+    constructor(
+    /** The name used to run this application. Will be used in error suggestions. */
+    name, description) {
         this.name = name;
         this.description = description;
         /** Stores all subcommands. */
         this.commands = {};
         /** Stores all command aliases. */
         this.aliases = {};
-        /** Used for tests. */
-        this.fs_realpathSync = fs.realpathSync;
         this.commands["help"] = new Subcommand("help", this.runHelpCommand.bind(this), "Displays help on all commands or a specific subcommand.", {
             positionalArgs: [{
                     name: "command",
                     description: "The command to get help on.",
-                    required: false
+                    optional: true
                 }],
-            namedArgs: {}
+            namedArgs: {},
+            positionalArgCountCheck: "ignore",
+            unexpectedNamedArgCheck: "warn",
         });
         this.sourceDirectory = "null";
     }
@@ -46,7 +49,9 @@ export class Application {
         this.commands[name] = new Subcommand(name, handler, description, {
             namedArgs: argOptions?.namedArgs ?? {},
             positionalArgs: argOptions?.positionalArgs ?? [],
-            aliases: argOptions?.aliases ?? {}
+            aliases: argOptions?.aliases ?? {},
+            positionalArgCountCheck: argOptions?.positionalArgCountCheck,
+            unexpectedNamedArgCheck: argOptions?.unexpectedNamedArgCheck,
         }, isDefault);
         if (aliases)
             aliases.forEach((alias) => this.alias(alias, name));
@@ -67,9 +72,11 @@ export class Application {
             const command = this.commands[commandName];
             if (command) {
                 const aliases = Object.entries(this.aliases).filter(([alias, name]) => name == commandName).map(([alias, name]) => alias);
-                const positionalArgsFragment = command.argOptions.positionalArgs.map(opt => opt.required ? `<${opt.name}>` : `[<${opt.name}>]`).join(" ");
+                const positionalArgsFragment = command.argOptions.positionalArgs.map(opt => opt.optional ? `[<${opt.name}>]` : `<${opt.name}>`).join(" ");
                 const namedArgsFragment = Object.entries(command.argOptions.namedArgs)
-                    .map(([name, opt]) => opt.required ? `--${name}${opt.needsValue ? ` <${name}>` : ``}` : `[--${name}${opt.needsValue ? ` <${name}>` : ``}]`).join(" ");
+                    .map(([name, opt]) => opt.optional ?
+                    `[--${name}${opt.valueless ? `` : ` <${name}>`}]`
+                    : `--${name}${opt.valueless ? `` : ` <${name}>`}`).join(" ");
                 const outputText = new StringBuilder()
                     .addLine()
                     .addLine(`Help for command ${command.name}:`)
@@ -107,42 +114,17 @@ Usage: ${this.name} [command] [options]
         }
         return 0;
     }
-    static splitLineIntoArguments(line) {
-        if (line.includes(`"`)) {
-            //aaaaaaaaaaaaaaaaa
-            const replacementLine = [];
-            let isInString = false;
-            for (const char of line) {
-                if (char == `"`) {
-                    isInString = !isInString;
-                }
-                if (isInString && char == " ") {
-                    replacementLine.push("\u{F4321}");
-                }
-                else {
-                    replacementLine.push(char);
-                }
-            }
-            return replacementLine.join("").split(" ").map(arg => arg.replaceAll("\u{F4321}", " "));
-            //smort logic so `"amogus sus"` is parsed as one arg
-        }
-        else {
-            return line.split(" ");
-        }
-    }
     /**
      * Parses command line arguments into an object.
-     * @param providedArgs Pass process.argv without modifying it.
+     * @param providedArgs Remove JS runtime options from process.argv.
      * @returns Formatted args.
      */
     static parseArgs(providedArgs, valuelessOptions = []) {
-        const parameters = {};
-        const commands = [];
+        const namedArgs = {};
+        const positionalArgs = [];
         let i = 0;
-        if (!providedArgs[0]?.includes("node")) {
-            throw new ApplicationError("Attempted to parse invalid args. Unless you are running this application in a strange way, this is likely an error with the application.");
-        }
-        const args = providedArgs.slice(2);
+        const args = providedArgs.slice();
+        let firstPositionalArg = undefined;
         while (true) {
             i++;
             if (i > 1000)
@@ -152,22 +134,22 @@ Usage: ${this.name} [command] [options]
                 break; //If it doesn't exist, return
             if (arg == "--") { //Arg separator
                 //Everything else should be considered a positional argument
-                commands.push(arg, ...args);
+                positionalArgs.push(arg, ...args);
                 break;
             }
             else if (arg.match(/^--([\s\S]+?)=([\s\S]+?)$/)) { //--name=value form
                 const [, name, value] = arg.match(/^--([\s\S]+?)=([\s\S]+?)$/);
-                parameters[name] = value;
+                namedArgs[name] = value;
             }
             else if (arg.match(/^--([\s\S]+)/)) { //Starts with two hyphens
                 const argName = arg.match(/^--([\s\S]+)/)[1];
                 if (args[0]?.startsWith("-") || valuelessOptions.includes(argName)) {
                     //If the next arg also starts with a hyphen, or the arg name is valueless, set it to null
-                    parameters[argName] = null;
+                    namedArgs[argName] = null;
                 }
                 else {
                     //Otherwise, pop off the first arg and set it to that
-                    parameters[argName] = args.shift() ?? null;
+                    namedArgs[argName] = args.shift() ?? null;
                 }
             }
             else if (arg.match(/^-(\w+)/)) { //Starts with one hyphen
@@ -179,24 +161,28 @@ Usage: ${this.name} [command] [options]
                 const lastShortArg = shortArgs.pop(); //\w+ means at least one character must have matched
                 if (args[0]?.startsWith("-") || valuelessOptions.includes(lastShortArg)) {
                     //If the next arg also starts with a hyphen, or the arg name is valueless, set it to null
-                    parameters[lastShortArg] = null;
+                    namedArgs[lastShortArg] = null;
                 }
                 else {
                     //Otherwise, pop off the first arg and set it to that
-                    parameters[lastShortArg] = args.shift() ?? null;
+                    namedArgs[lastShortArg] = args.shift() ?? null;
                 }
                 for (const arg of shortArgs) {
-                    parameters[arg] = null;
+                    namedArgs[arg] = null;
                 }
             }
             else {
                 //It's a positional arg
-                commands.push(arg);
+                positionalArgs.push(arg);
+                if (i == 1) {
+                    firstPositionalArg = arg;
+                }
             }
         }
         return {
-            positionalArgs: commands,
-            namedArgs: parameters
+            positionalArgs,
+            namedArgs,
+            firstPositionalArg
         };
     }
     /**
@@ -204,63 +190,52 @@ Usage: ${this.name} [command] [options]
      * @param args Pass process.argv without modifying it.
      * @param options Used for testing.
      */
-    async run(args, { exitProcessOnHandlerReturn = true, throwOnError = false, } = {}) {
-        this.sourceDirectory = path.join(this.fs_realpathSync(args[1]), "..");
-        const parsedArgs = Application.parseArgs(args);
-        let command;
-        const { positionalArgs } = parsedArgs;
-        if ("help" in parsedArgs.namedArgs) {
-            command = this.commands["help"];
-        }
-        else if (this.commands[parsedArgs.positionalArgs[0]]) {
-            command = this.commands[parsedArgs.positionalArgs[0]];
-            positionalArgs.shift();
-        }
-        else if (this.aliases[parsedArgs.positionalArgs[0]]) {
-            command = this.commands[this.aliases[parsedArgs.positionalArgs[0]]];
-            positionalArgs.shift();
-        }
-        else {
-            command = Object.values(this.commands).filter(command => command?.defaultCommand)[0] ?? this.commands["help"];
-        }
-        if (command) {
-            //Loop through each named argument passed
-            Object.keys(parsedArgs.namedArgs).forEach(arg => {
-                //If the arg is not in the named arguments or the aliases
-                if (!(arg in command.argOptions.namedArgs || arg in command.argOptions.aliases || arg == "help" || arg == "?"))
-                    //Display a warning
-                    console.warn(`Unknown argument ${arg}`);
-            });
-            try {
-                const result = await command.run({
-                    namedArgs: {
-                        ...Object.fromEntries(Object.entries(parsedArgs.namedArgs)
-                            .map(([name, value]) => [command?.argOptions.aliases?.[name] ?? name, value]))
-                    },
-                    positionalArgs: positionalArgs,
-                    commandName: command.name
-                }, this);
-                if (typeof result == "number") {
-                    if (exitProcessOnHandlerReturn)
-                        process.exit(result);
-                    else if (result != 0)
-                        throw new Error(`Non-zero exit code: ${result}`);
-                }
+    async run(rawArgs, { exitProcessOnHandlerReturn = true, throwOnError = false, } = {}) {
+        //This function does as little work as possible, and calls Subcommand.run()
+        this.sourceDirectory = path.join(fs.realpathSync(rawArgs[1]), "..");
+        //We need to do some argument parsing to determine which subcommand to run
+        //but, once the subcommand has been determined, valueless args may change the parse result
+        //solution: parse args twice
+        //this can lead to ambiguous commands: `command --valueless parameter subcommand`
+        //solution: do not allow named arguments before the subcommand name
+        const args = rawArgs.slice(2);
+        const { namedArgs, firstPositionalArg } = Application.parseArgs(args);
+        //Set "help" to the default command: if someone runs `command nonexistentsubcommand ...rest`,
+        //it will get interpreted as `command help nonexistentsubcommand ...rest`, which will generate the correct error message.
+        const defaultCommand = Object.values(this.commands).filter(command => command?.defaultCommand)[0] ?? this.commands["help"]; //TODO compute in .command()
+        const [newArgs, command] = (() => {
+            if ("help" in namedArgs || "?" in namedArgs) {
+                return [args, this.commands["help"]];
             }
-            catch (err) {
-                if (throwOnError)
-                    throw err;
-                if (err instanceof ApplicationError) {
-                    console.error(`Error: ${err.message}`);
-                }
-                else {
-                    console.error("The command encountered an unhandled runtime error.");
-                    console.error(err);
-                }
+            else if (firstPositionalArg && this.commands[firstPositionalArg]) {
+                return [args.slice(1), this.commands[firstPositionalArg]];
+            }
+            else if (firstPositionalArg && this.aliases[firstPositionalArg]) {
+                return [args.slice(1), this.commands[this.aliases[firstPositionalArg]]
+                        ?? invalidConfig(`Subcommand "${firstPositionalArg}" was aliased to ${this.aliases[firstPositionalArg]}, which is not a valid command`)];
+            }
+            else
+                return [args, defaultCommand];
+        })();
+        try {
+            const result = await command.run(newArgs, this);
+            if (typeof result == "number") {
+                if (exitProcessOnHandlerReturn)
+                    process.exit(result);
+                else if (result != 0)
+                    throw new Error(`Non-zero exit code: ${result}`);
             }
         }
-        else {
-            console.error(`Unknown command: ${parsedArgs.positionalArgs[0]}\nRun "${this.name} help" for a list of all commands.`);
+        catch (err) {
+            if (throwOnError)
+                throw err;
+            if (err instanceof ApplicationError) {
+                console.error(`Error: ${err.message}`);
+            }
+            else {
+                console.error("The command encountered an unhandled runtime error.");
+                console.error(err);
+            }
         }
     }
 }
@@ -277,86 +252,116 @@ export class Subcommand {
         this.argOptions = {
             namedArgs: Object.fromEntries(Object.entries(argOptions.namedArgs).map(([key, value]) => [key, {
                     description: value.description ?? "No description provided",
-                    required: value.default ? false : value.required ?? false,
+                    optional: value.default ? ("optional" in value && invalidConfig(`named argument "${key}" has a default value, therefore it is optional, but "optional" was specified again. Please delete the redundant property.`),
+                        true) : value.optional ?? (value.valueless ? true : false),
                     default: value.default ?? null,
-                    needsValue: value.needsValue ?? true,
+                    valueless: value.valueless ?? false,
                     aliases: (value.aliases ?? []).concat(Object.entries(argOptions.aliases ?? {}).filter(([from, to]) => from == key).map(([from, to]) => to)),
                 }])),
             aliases: Object.fromEntries([
                 ...Object.entries(argOptions.aliases ?? []),
                 ...Object.entries(argOptions.namedArgs).map(([name, opts]) => opts.aliases?.map(alias => [alias, name]) ?? []).flat(),
             ]),
-            positionalArgs: argOptions.positionalArgs.map(a => ({
+            positionalArgs: argOptions.positionalArgs.map((a, i) => ({
                 ...a,
                 default: a.default ?? null,
-                required: a.default ? false : a.required ?? true,
+                optional: a.default ? ("optional" in a && invalidConfig(`in subcommand ${name}: positional argument ${i} has a default value, therefore it is optional, but "optional" was specified again. Please delete the redundant property.`),
+                    true) : a.optional ?? false,
             })) ?? [],
-            positionalArgCountCheck: argOptions.positionalArgCountCheck ?? "ignore"
+            positionalArgCountCheck: argOptions.positionalArgCountCheck ?? "ignore",
+            unexpectedNamedArgCheck: argOptions.unexpectedNamedArgCheck ?? "error",
         };
         //Validate named args
         for (const [key, opt] of Object.entries(this.argOptions.namedArgs)) {
-            if (opt.needsValue === false && !["false", "true", null].includes(opt.default))
-                throw new Error(`cli-app configuration error: "default" property of option "${key}" with needsValue:false was set to invalid value ${opt.default} (valid values are "false" and "true")`);
+            if (opt.valueless && opt.default)
+                invalidConfig(`in subcommand ${name}: named argument "${key}" with property "valueless" has a default specified, but this is meaningless`);
         }
-        //Make sure positional arg options are valid
+        //Validate positional args
         let optionalArgsStarted = false;
         for (const arg of this.argOptions.positionalArgs) {
-            if (optionalArgsStarted && (arg.required || arg.default))
-                throw new Error(`cli-app configuration error in subcommand ${name}: Required positional arguments, or ones with a default value, cannot follow optional ones.`);
-            if (!(arg.required || arg.default))
+            if (optionalArgsStarted && !arg.optional)
+                invalidConfig(`in subcommand ${name}: Required positional arguments, or ones with a default value, cannot follow optional ones.`);
+            if (arg.optional)
                 optionalArgsStarted = true;
         }
     }
-    /**
-     * Runs this subcommand.
-     */
-    run(options, application) {
-        //TODO put the logic in Application.run and Subcommand.run into one function
+    /** Runs this subcommand. Do not call directly, call the application's run method instead. */
+    run(args, application) {
         if (application.sourceDirectory == "null")
-            throw new Error("application.sourceDirectory is null. Don't call subcommand.run() directly.\nThis is an error with cli-app or the application.");
-        const requiredPositionalArgs = this.argOptions.positionalArgs.filter(arg => arg.required);
-        const valuedPositionalArgs = this.argOptions.positionalArgs
-            .filter(arg => arg.required || arg.default);
-        //Handle named args
-        Object.entries(this.argOptions.namedArgs).forEach(([name, opt]) => {
-            if (!opt.needsValue) {
-                if (options.namedArgs[name] === undefined) {
-                    if (opt.default == "true")
-                        options.namedArgs[name] = "true";
-                }
+            crash("application.sourceDirectory is null. Don't call subcommand.run() directly.");
+        const usageInstructionsMessage = `for usage instructions, run ${application.name} help ${this.name}`;
+        const valuelessOptions = Object.entries(this.argOptions.namedArgs)
+            .filter(([k, v]) => v.valueless)
+            .map(([k, v]) => v.aliases.concat(k)).flat();
+        const { namedArgs, positionalArgs } = Application.parseArgs(args, valuelessOptions);
+        //Handle positional args
+        if (positionalArgs.length > this.argOptions.positionalArgs.length) {
+            //Count check
+            const message = `this command expects at most ${this.argOptions.positionalArgs.length} positional arguments, but ${positionalArgs.length} arguments were passed`;
+            if (this.argOptions.positionalArgCountCheck == "error")
+                throw new ApplicationError(message + `\n` + usageInstructionsMessage);
+            else if (this.argOptions.positionalArgCountCheck == "warn")
+                console.warn(`Warning: ` + message);
+        }
+        for (const [i, arg] of this.argOptions.positionalArgs.entries()) {
+            if (i >= positionalArgs.length) {
+                if (arg.default != null)
+                    positionalArgs[i] = arg.default;
+                else if (arg.optional)
+                    positionalArgs[i] = undefined;
                 else
-                    options.namedArgs[name] = "true";
+                    throw new ApplicationError(`Missing required positional argument "${arg.name}"
+this command expects at least ${this.argOptions.positionalArgs.filter(o => !o.optional).length} positional arguments, but ${positionalArgs.length} arguments were passed
+${usageInstructionsMessage}`);
             }
-            else {
-                if (!options.namedArgs[name]) { //If the named arg was not specified
-                    if (opt.default) { //If it has a default value, set it to that
-                        options.namedArgs[name] = opt.default;
-                    }
-                    else if (opt.required) { //If it's required, throw an error
-                        throw new ApplicationError(`No value specified for required named argument "${name}". To specify it, run the command with --${name} <value>`);
-                    }
-                }
+        }
+        //Handle named args
+        Object.entries(namedArgs).forEach(([name, value]) => {
+            const aliased = this.argOptions.aliases[name];
+            if (aliased) {
+                namedArgs[aliased] ??= value;
+                delete namedArgs[name];
             }
         });
-        //If not enough args were provided, throw an error
-        if (options.positionalArgs.length < requiredPositionalArgs.length) {
-            const missingPositionalArgs = requiredPositionalArgs.slice(options.positionalArgs.length).map(arg => arg.name);
-            throw new ApplicationError(`Missing required positional argument${missingPositionalArgs.length == 1 ? "" : "s"} "${missingPositionalArgs.join(", ")}". To specify it, run the command passing <value> as an argument.`);
+        if (this.argOptions.unexpectedNamedArgCheck != "ignore") {
+            Object.entries(namedArgs).forEach(([name, value]) => {
+                //excess check
+                //If the arg is not in the named arguments or the aliases
+                if (!(name in this.argOptions.namedArgs || name in this.argOptions.aliases || name == "help" || name == "?")) {
+                    const message = `Unexpected argument --${name}${value === null ? "" : `=${value}`}`;
+                    if (this.argOptions.unexpectedNamedArgCheck == "warn")
+                        console.warn(message);
+                    else if (this.argOptions.unexpectedNamedArgCheck == "error")
+                        throw new ApplicationError(message + "\n" + usageInstructionsMessage);
+                }
+            });
         }
-        //If too many args were provided, warn
-        if (this.argOptions.positionalArgCountCheck == "warn" && options.positionalArgs.length > this.argOptions.positionalArgs.length) {
-            console.warn(`Warning: Too many positional arguments (required ${this.argOptions.positionalArgs.length}, provided ${options.positionalArgs.length})`);
-        }
-        //Fill in default values for positional args
-        if (options.positionalArgs.length < valuedPositionalArgs.length) {
-            for (let i = options.positionalArgs.length; i < valuedPositionalArgs.length; i++) {
-                if (!valuedPositionalArgs[i].default)
-                    throw new ApplicationError(`valuedPositionalArgs[${i}].default is not defined. This is an error with cli-app.`);
-                options.positionalArgs[i] = valuedPositionalArgs[i].default;
+        Object.entries(this.argOptions.namedArgs).forEach(([name, opt]) => {
+            if (namedArgs[name] == null) { //If the named arg was not specified or was left blank
+                if (opt.default) { //If it has a default value, set it to that
+                    namedArgs[name] = opt.default;
+                }
+                else if (opt.optional) {
+                    if (!opt.valueless) {
+                        namedArgs[name] = name in namedArgs ? null : undefined;
+                    }
+                }
+                else
+                    throw new ApplicationError(
+                    //If it's required, fail with an error
+                    `No value specified for required named argument "${name}".
+To specify it, run the command with --${name}${opt.valueless ? "" : " <value>"}
+${usageInstructionsMessage}`);
             }
-        }
+            if (opt.valueless) {
+                //Convert valueless named args to booleans
+                namedArgs[name] = (namedArgs[name] === null);
+            }
+        });
         return this.handler({
-            ...options
+            commandName: this.name,
+            positionalArgs,
+            namedArgs,
         }, application);
     }
 }

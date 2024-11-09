@@ -20,7 +20,7 @@ export class Script {
             positionalArgs: [{
                     name: "command",
                     description: "The command to get help on.",
-                    required: false
+                    optional: true
                 }],
             namedArgs: {}
         });
@@ -36,9 +36,11 @@ export class Script {
      * Runs the help command for this application. Do not call directly.
      */
     runHelpCommand(opts) {
-        const positionalArgsFragment = this.defaultCommand.argOptions.positionalArgs.map(opt => opt.required ? `<${opt.name}>` : `[<${opt.name}>]`).join(" ");
+        const positionalArgsFragment = this.defaultCommand.argOptions.positionalArgs.map(opt => opt.optional ? `[<${opt.name}>]` : `<${opt.name}>`).join(" ");
         const namedArgsFragment = Object.entries(this.defaultCommand.argOptions.namedArgs)
-            .map(([name, opt]) => opt.required ? `--${name}${opt.needsValue ? ` <${name}>` : ""}` : `[--${name}${opt.needsValue ? ` <${name}>` : ``}]`).join(" ");
+            .map(([name, opt]) => opt.optional ?
+            `[--${name}${opt.valueless ? `` : ` <${name}>`}]`
+            : `--${name}${opt.valueless ? "" : ` <${name}>`}`).join(" ");
         const outputText = new StringBuilder()
             .addLine()
             .addLine(`Help for ${this.name}:`)
@@ -62,12 +64,13 @@ export class Script {
     }
     /**
      * Runs an application.
-     * @param args Pass process.argv without modifying it.
+     * @param rawArgs Pass process.argv without modifying it.
      * @param options Used for testing.
      */
-    run(args, options) {
-        this.sourceDirectory = path.join(fs.realpathSync(args[1]), "..");
-        const parsedArgs = Application.parseArgs(args, Object.entries(this.defaultCommand.argOptions.namedArgs).filter(([k, v]) => !v.needsValue).map(([k, v]) => v.aliases.concat(k)).flat());
+    async run(rawArgs, options) {
+        this.sourceDirectory = path.join(fs.realpathSync(rawArgs[1]), "..");
+        const args = rawArgs.slice(2);
+        const parsedArgs = Application.parseArgs(args);
         let command;
         if ("help" in parsedArgs.namedArgs || "?" in parsedArgs.namedArgs) {
             command = this.helpCommand;
@@ -75,21 +78,15 @@ export class Script {
         else {
             command = this.defaultCommand;
         }
-        //Loop through each named argument passed
-        Object.keys(parsedArgs.namedArgs).forEach(arg => 
-        //If the arg is not in the named arguments or the aliases
-        (arg in command.argOptions.namedArgs || arg in (command.argOptions.aliases ?? {}) || arg == "help" || arg == "?") ? "" :
-            //Display a warning
-            console.warn(`Unknown argument ${arg}`));
+        //Warn on unexpected named arguments
+        Object.keys(parsedArgs.namedArgs).forEach(arg => {
+            if (!(arg in command.argOptions.namedArgs ||
+                arg in (command.argOptions.aliases ?? {}) ||
+                arg == "help" || arg == "?"))
+                console.warn(`Unknown argument ${arg}`);
+        });
         try {
-            const result = command.run({
-                namedArgs: {
-                    ...Object.fromEntries(Object.entries(parsedArgs.namedArgs)
-                        .map(([name, value]) => [command?.argOptions.aliases?.[name] ?? name, value]))
-                },
-                positionalArgs: parsedArgs.positionalArgs,
-                commandName: command.name
-            }, this);
+            const result = await command.run(args, this);
             if (typeof result == "number") {
                 if (options?.exitProcessOnHandlerReturn)
                     process.exit(result);

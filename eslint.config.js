@@ -40,6 +40,7 @@ export default tseslint.config(
 			"@typescript-eslint/no-unsafe-function-type": "off",
 			"@typescript-eslint/no-empty-object-type": "off",
 			"@typescript-eslint/prefer-promise-reject-errors": "off",
+			"@typescript-eslint/no-explicit-any": "off",
 		},
 	},
 	{
