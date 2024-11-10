@@ -1,6 +1,6 @@
 {
   "name": "@balam314/cli-app",
-  "version": "1.0.0",
+  "version": "3.0.0",
   "description": "A tool to help you build CLI applications.",
   "main": "build/index.js",
   "scripts": {
