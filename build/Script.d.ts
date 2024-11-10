@@ -4,8 +4,8 @@ import { ApplicationRunOptions, ArgOptions, CommandHandler, SpecificOptions } fr
  * Represents an application that does one thing only.
  */
 export declare class Script<A extends Partial<ArgOptions>> {
-    defaultCommand: Subcommand<this, any>;
-    helpCommand: Subcommand<this, any>;
+    defaultCommand: Subcommand<this>;
+    helpCommand: Subcommand<this>;
     name: string;
     sourceDirectory: string;
     constructor(name: string, description: string, handler: CommandHandler<Script<A>, A>, argOptions?: A);

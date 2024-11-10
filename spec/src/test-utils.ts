@@ -1,8 +1,7 @@
 
 import path from "node:path";
 import { ApplicationError } from "../../build/classes.js";
-import { ApplicationRunOptions } from "../../src/types.js";
-import { Application } from "../../src/Application.js";
+import { Application, ApplicationRunOptions } from "../../src/Application.js";
 
 process.chdir(path.join(import.meta.dirname, ".."));
 

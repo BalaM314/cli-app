@@ -11,16 +11,169 @@ Contains the code for the Application class, which represents a command-line app
 import path from "node:path";
 import fs from "node:fs";
 import { ApplicationError, StringBuilder } from "./classes.js";
-import type { Script } from "./Script.js";
-import type { ApplicationRunOptions, ArgOptions, CommandHandler, FilledArgOptions, NamedArgOptions, RequiredRecursive, SpecificOptions } from "./types.js";
+import type { Expand, OmitFunctionProperties, PickFunctionProperties } from "./types.js";
 import { crash, invalidConfig } from "./funcs.js";
+
+export interface PositionalArgOptions {
+	name: string;
+	description: string;
+	/**
+	 * Whether the argument does not need to be specified by the command invoker. Default: false.
+	 * If true, the command will be called with `undefined` for the value of this argument if it was omitted.
+	 * Not allowed if a default value was specified.
+	 */
+	optional?: boolean;
+	/**A default value for the argument. */
+	default?: string | null;
+}
+
+export type ApplicationRunOptions = {
+	/**
+	 * If the command handler throws an ApplicationError, normally, this function will catch it and print an error message.
+	 * If this option is set, the error will be immediately rethrown. Useful for writing tests.
+	 * @default false
+	 */
+	throwOnError?: boolean;
+	/**
+	 * If this option is set, {@link process.exit()} will be called when the command handler returns a numeric exit code.
+	 * Otherwise, this function will throw an error if the exit code is non-zero.
+	 * @default true
+	 */
+	exitProcessOnHandlerReturn?: boolean;
+};
+
+export type ArgOptions<NamedArgsOptions extends Record<string, ArgData>> = {
+	/** Named arguments, which are passed like `--name value` or `--name=value`. */
+	namedArgs?: NamedArgsOptions;
+	/** Aliases for named args' names. */
+	aliases?: Record<string, string>;
+	/** Positional arguments, which are passed like `value1 value2`... */
+	positionalArgs?: PositionalArgOptions[];
+	/**
+	 * Specifies the behavior if there are more positional args than the command is supposed to accept.
+	 * @default "ignore".
+	 */
+	positionalArgCountCheck?: "error" | "warn" | "ignore";
+	/**
+	 * Specifies the behavior if there is a named arg that the command does not accept.
+	 * @default "error".
+	 */
+	unexpectedNamedArgCheck?: "error" | "warn" | "ignore";
+};
+
+export interface SpecificOptions<NamedArgsOptions extends Record<string, ArgData>> {
+	/**All named args specified with --name value. */
+	namedArgs:
+		{} extends NamedArgsOptions ? {} :
+		Record<string, ArgData> extends NamedArgsOptions ? Record<string, string | boolean | undefined | null> :
+		NamedArgs<NamedArgsOptions>;
+	/**Positional args specified by simply stating them. */
+	positionalArgs: (string | undefined)[]; //TODO typedef
+	commandName: string;
+}
+
+/**Generates the type definition for named args based on given argOptions. */
+type NamedArgs<NamedArgOpts extends Record<string, ArgData>> = {
+	[K in keyof NamedArgOpts]: NamedArgFrom<NamedArgOpts[K]>;
+};
+
+//This code is super cursed. Fix if you know how.
+type NamedArgFrom<NamedArgOpt extends ArgData> =
+	NamedArgOpt["_valueless"] extends true ?
+		NamedArgOpt["_optional"] extends false ? true : (false | true)
+	: NamedArgOpt["_optional"] extends true ? NamedArgOpt["_default"] extends string ? string : (string | undefined | null) : string;
+
+export type CommandHandler<T extends Record<string, ArgData>> = 
+	(opts: Expand<SpecificOptions<T>>, app: Application) => void | number | Promise<void | number>;
+
+
+
+export type CommandData = {
+	readonly _name: string;
+	readonly _description: string | undefined;
+	readonly _default: boolean;
+	readonly _aliases: string[];
+};
+export type CommandBuilder = CommandData & {
+	description<T extends Partial<CommandBuilder>>(this:T, description:string):
+		Omit<T, "description" | "_description"> & { _description: string };
+	aliases<T extends Partial<CommandBuilder>>(this:T, ...aliases:string[]):
+		Omit<T, "aliases">;
+	default<T extends Partial<CommandBuilder>>(this:T):
+		Omit<T, "default">;
+	args<TThis extends Partial<CommandBuilder>, const TArgs extends Record<string, ArgData>>(this:TThis, argOptions:ArgOptions<TArgs>):
+		Omit<TThis, "description" | "aliases" | "args"> & {
+			impl(this:CommandData, impl:CommandHandler<TArgs>):void;
+		};
+};
+type InitialCommandBuilder = CommandBuilder & {
+	readonly _default: false;
+};
+
+
+
+type ArgData = {
+	readonly _optional: boolean;
+	readonly _valueless: boolean;
+	readonly _default: string | undefined;
+	readonly _description: string | undefined;
+	readonly _aliases: string[];
+};
+type ArgBuilder = ArgData & {
+	description<T extends Partial<ArgBuilder>, const V extends string>(this:T, description:V):
+		Omit<T, "description"> & { _description: V; };
+	optional<T extends Partial<ArgBuilder>>(this:T):
+		Omit<T, "optional" | "required" | "default" | "_optional" | "valueless"> & { _optional: true; };
+	required<T extends Partial<ArgBuilder>>(this:T):
+		Omit<T, "optional" | "required" | "default" | "_optional" | "valueless"> & { _optional: false; };
+	valueless<T extends Partial<ArgBuilder>>(this:T):
+		Omit<T, "valueless" | "_valueless" | "_optional"> & { _valueless: true; _optional: true; };
+	default<T extends Partial<ArgBuilder>, const V extends string>(this:T, value:V):
+		Omit<T, "default" | "_default" | "_optional" | "optional" | "required"> & { _default: V; _optional: true; };
+	aliases<T extends Partial<ArgBuilder>>(this:T, ...aliases:string[]):
+		Omit<T, "aliases" | "_aliases"> & { _aliases: string[]; };
+};
+type InitialArgBuilder = ArgBuilder & {
+	readonly _optional: false;
+	readonly _valueless: false;
+};
+export const arg:() => InitialArgBuilder = (() => {
+	const ArgBuilderPrototype: PickFunctionProperties<ArgBuilder> = {
+		description(description){
+			return { ...this, _description: description, __proto__: ArgBuilderPrototype };
+		},
+		optional(){
+			return { ...this, _optional: true, __proto__: ArgBuilderPrototype };
+		},
+		required(){
+			return { ...this, _optional: false, __proto__: ArgBuilderPrototype };
+		},
+		valueless(){
+			return { ...this, _valueless: true, _optional: true, __proto__: ArgBuilderPrototype };
+		},
+		default(value){
+			return { ...this, _default: value, _optional: true, __proto__: ArgBuilderPrototype };
+		},
+		aliases(...aliases){
+			return { ...this, _aliases: aliases, __proto__: ArgBuilderPrototype };
+		},
+	};
+	return () => ({
+		__proto__: ArgBuilderPrototype,
+		_default: undefined,
+		_description: undefined,
+		_optional: false,
+		_valueless: false,
+		_aliases: [],
+	} satisfies OmitFunctionProperties<InitialArgBuilder> & { __proto__: any; } as never as OmitFunctionProperties<InitialArgBuilder> & typeof ArgBuilderPrototype);
+})();
 
 /**
  * Represents an entire application, with multiple subcommands and various functionality.
  */
 export class Application {
 	/** Stores all subcommands. */
-	commands: Record<string, Subcommand<Application, any> | undefined> = {};
+	commands: Record<string, Subcommand | undefined> = {};
 	/** Stores all command aliases. */
 	aliases: {
 		[alias: string]: string;
@@ -58,16 +211,38 @@ export class Application {
 	 * @param argOptions Specifies the args that can be passed to this subcommand through the command line.
 	 * @param aliases List of alternative names for this command.
 	 */
-	command<A extends Partial<ArgOptions>>(name:string, description:string, handler:CommandHandler<Application, A>, isDefault?:boolean, argOptions?:A, aliases?:string[]):this {
-		this.commands[name] = new Subcommand<Application, A>(name, handler, description, {
-			namedArgs: argOptions?.namedArgs ?? {},
-			positionalArgs: argOptions?.positionalArgs ?? [],
-			aliases: argOptions?.aliases ?? {},
-			positionalArgCountCheck: argOptions?.positionalArgCountCheck,
-			unexpectedNamedArgCheck: argOptions?.unexpectedNamedArgCheck,
-		}, isDefault);
-		if(aliases) aliases.forEach((alias) => this.alias(alias, name));
-		return this;//For daisy chaining
+	command(name:string):CommandBuilder;
+	command(name:string, description:string):Omit<CommandBuilder, "description"> & { _description: string };
+	command(name:string, description?:string):Omit<CommandBuilder, "description"> {
+		const app = this;
+		const CommandBuilderPrototype: PickFunctionProperties<CommandBuilder> = {
+			description(description){
+				return { ...this, _description: description, __proto__: CommandBuilderPrototype };
+			},
+			aliases(...aliases) {
+				return { ...this, _aliases: aliases, __proto__: CommandBuilderPrototype };
+			},
+			default() {
+				return { ...this, _default: true, __proto__: CommandBuilderPrototype };
+			},
+			args(argOptions){
+				return {
+					...this,
+					impl(impl){
+						app.commands[name] = new Subcommand(this._name, impl, this._description, argOptions, this._default);
+						this._aliases.forEach(alias => app.aliases[alias] = name);
+					}
+				};
+			},
+		};
+		const builder:CommandBuilder = ({
+			__proto__: CommandBuilderPrototype,
+			_name: name,
+			_default: false,
+			_description: description,
+			_aliases: [],
+		} satisfies OmitFunctionProperties<InitialCommandBuilder> & { __proto__: any; } as never as OmitFunctionProperties<InitialCommandBuilder> & typeof CommandBuilderPrototype);
+		return builder;
 	}
 	/** Creates an alias for a subcommand. */
 	alias(alias:string, target:string){
@@ -75,14 +250,7 @@ export class Application {
 		return this;
 	}
 	/** Runs the help command for this application. Do not call directly. */
-	runHelpCommand(opts:SpecificOptions<{
-		positionalArgs: [{
-			name: "command",
-			description: "The command to get help on.",
-			required: false
-		}],
-		namedArgs: {}
-	}>):number {
+	runHelpCommand(opts:Expand<SpecificOptions<Record<string, ArgData>>>):number {
 		if(!(this instanceof Application)){
 			throw new ApplicationError("application.runHelpCommand was bound incorrectly. This is most likely an error with cli-app.");
 		}
@@ -98,9 +266,9 @@ export class Application {
 				const namedArgsFragment =
 					Object.entries(command.argOptions.namedArgs)
 						.map(([name, opt]) =>
-							opt.optional ?
-								`[--${name}${opt.valueless ? `` : ` <${name}>`}]`
-							: `--${name}${opt.valueless ? `` : ` <${name}>`}`
+							opt._optional ?
+								`[--${name}${opt._valueless ? `` : ` <${name}>`}]`
+							: `--${name}${opt._valueless ? `` : ` <${name}>`}`
 						).join(" ");
 				const outputText = new StringBuilder()
 					.addLine()
@@ -115,7 +283,7 @@ export class Application {
 				if(Object.entries(command.argOptions.namedArgs).length != 0){
 					Object.entries(command.argOptions.namedArgs)
 						.map(([name, opt]) =>
-							`<${name}>: ${opt.description}`
+							`<${name}>: ${opt._description}`
 						).forEach(line => outputText.addLine(line));
 					outputText.addLine();
 				}
@@ -240,7 +408,7 @@ Usage: ${this.name} [command] [options]
 		//Set "help" to the default command: if someone runs `command nonexistentsubcommand ...rest`,
 		//it will get interpreted as `command help nonexistentsubcommand ...rest`, which will generate the correct error message.
 		const defaultCommand = Object.values(this.commands).filter(command => command?.defaultCommand)[0] ?? this.commands["help"]!; //TODO compute in .command()
-		const [newArgs, command]:[string[], Subcommand<Application, any>] = (() => {
+		const [newArgs, command]:[string[], Subcommand] = (() => {
 			if("help" in namedArgs || "?" in namedArgs){
 				return [args, this.commands["help"]!];
 			} else if(firstPositionalArg && this.commands[firstPositionalArg]){
@@ -272,37 +440,34 @@ Usage: ${this.name} [command] [options]
 /**
  * Represents one subcommand of an application or script.
  */
-export class Subcommand<App extends Application | Script<ArgOptions>, A extends Partial<ArgOptions>> {
+export class Subcommand {
 	/**
 	 * Information describing the command-line options that this subcommand accepts.
 	 */
-	argOptions:FilledArgOptions;
+	argOptions:Required<ArgOptions<Record<string, ArgData>>>;
 	constructor(
 		public name:string,
-		public handler:CommandHandler<App, A>,
+		public handler:CommandHandler<any>,
 		public description:string = "No description provided",
-		argOptions:ArgOptions = {namedArgs: {}, positionalArgs: []},
+		argOptions:ArgOptions<Record<string, ArgData>> = {namedArgs: {}, positionalArgs: []},
 		public defaultCommand:boolean = false
 	){
 		//Fill in the provided arg options
 		this.argOptions = {
-			namedArgs: Object.fromEntries(Object.entries(argOptions.namedArgs).map<[string, RequiredRecursive<NamedArgOptions>]>(([key, value]) => [key, {
-				description: value.description ?? "No description provided",
-				optional: value.default ? (
-					"optional" in value && invalidConfig(`named argument "${key}" has a default value, therefore it is optional, but "optional" was specified again. Please delete the redundant property.`),
-					true
-				) : value.optional ?? (value.valueless ? true : false),
-				default: value.default ?? null,
-				valueless: value.valueless ?? false,
-				aliases: (value.aliases ?? []).concat(Object.entries(argOptions.aliases ?? {}).filter(([from, to]) => from == key).map(([from, to]) => to)),
+			namedArgs: Object.fromEntries(Object.entries(argOptions.namedArgs ?? {}).map<[string, ArgData]>(([key, value]) => [key, {
+				_description: value._description ?? "No description provided",
+				_optional: value._optional,
+				_default: value._default,
+				_valueless: value._valueless,
+				_aliases: value._aliases.concat(Object.entries(argOptions.aliases ?? {}).filter(([from, to]) => from == key).map(([from, to]) => to)),
 			}])),
 			aliases: Object.fromEntries<string>([
 				...Object.entries(argOptions.aliases ?? []),
-				...Object.entries(argOptions.namedArgs).map(([name, opts]) =>
-					opts.aliases?.map(alias => [alias, name] as [string, string]) ?? []
+				...Object.entries(argOptions.namedArgs ?? {}).map(([name, opts]) =>
+					opts._aliases?.map(alias => [alias, name] as const) ?? []
 				).flat(),
 			]),
-			positionalArgs: argOptions.positionalArgs.map((a, i) => ({
+			positionalArgs: (argOptions.positionalArgs ?? []).map((a, i) => ({
 				...a,
 				default: a.default ?? null,
 				optional: a.default ? (
@@ -314,11 +479,7 @@ export class Subcommand<App extends Application | Script<ArgOptions>, A extends 
 			unexpectedNamedArgCheck: argOptions.unexpectedNamedArgCheck ?? "error",
 		};
 
-		//Validate named args
-		for(const [key, opt] of Object.entries(this.argOptions.namedArgs)){
-			if(opt.valueless && opt.default)
-				invalidConfig(`in subcommand ${name}: named argument "${key}" with property "valueless" has a default specified, but this is meaningless`);
-		}
+		//Validating named args is not necessary as the command builder already does that
 
 		//Validate positional args
 		let optionalArgsStarted = false;
@@ -328,7 +489,7 @@ export class Subcommand<App extends Application | Script<ArgOptions>, A extends 
 		}
 	}
 	/** Runs this subcommand. Do not call directly, call the application's run method instead. */
-	run(args:string[], application:App){
+	run(args:string[], application:Application){
 		
 		if(application.sourceDirectory == "null")
 			crash("application.sourceDirectory is null. Don't call subcommand.run() directly.");
@@ -336,8 +497,8 @@ export class Subcommand<App extends Application | Script<ArgOptions>, A extends 
 
 
 		const valuelessOptions = Object.entries(this.argOptions.namedArgs)
-			.filter(([k, v]) => v.valueless)
-			.map(([k, v]) => v.aliases.concat(k)).flat();
+			.filter(([k, v]) => v._valueless)
+			.map(([k, v]) => v._aliases.concat(k)).flat();
 		const { namedArgs, positionalArgs }:{
 			namedArgs: Record<string, string | boolean | undefined | null>;
 			positionalArgs: (string | undefined)[];
@@ -384,26 +545,26 @@ ${usageInstructionsMessage}`
 		}
 		Object.entries(this.argOptions.namedArgs).forEach(([name, opt]) => {
 			if(namedArgs[name] == null){ //If the named arg was not specified or was left blank
-				if(opt.default){ //If it has a default value, set it to that
-					namedArgs[name] = opt.default;
-				} else if(opt.optional) {
-					if(!opt.valueless){
+				if(opt._default != null){ //If it has a default value, set it to that
+					namedArgs[name] = opt._default;
+				} else if(opt._optional) {
+					if(!opt._valueless){
 						namedArgs[name] = name in namedArgs ? null : undefined;
 					}
 				} else throw new ApplicationError(
 					//If it's required, fail with an error
 `No value specified for required named argument "${name}".
-To specify it, run the command with --${name}${opt.valueless ? "" : " <value>"}
+To specify it, run the command with --${name}${opt._valueless ? "" : " <value>"}
 ${usageInstructionsMessage}`
 				);
 			}
-			if(opt.valueless){
+			if(opt._valueless){
 				//Convert valueless named args to booleans
 				namedArgs[name] = (namedArgs[name] === null);
 			}
 		});
 
-		return (this.handler as CommandHandler<App, any>)({
+		return this.handler({
 			commandName: this.name,
 			positionalArgs,
 			namedArgs,

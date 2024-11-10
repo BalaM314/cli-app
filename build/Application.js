@@ -11,6 +11,36 @@ import path from "node:path";
 import fs from "node:fs";
 import { ApplicationError, StringBuilder } from "./classes.js";
 import { crash, invalidConfig } from "./funcs.js";
+export const arg = (() => {
+    const ArgBuilderPrototype = {
+        description(description) {
+            return { ...this, _description: description, __proto__: ArgBuilderPrototype };
+        },
+        optional() {
+            return { ...this, _optional: true, __proto__: ArgBuilderPrototype };
+        },
+        required() {
+            return { ...this, _optional: false, __proto__: ArgBuilderPrototype };
+        },
+        valueless() {
+            return { ...this, _valueless: true, _optional: true, __proto__: ArgBuilderPrototype };
+        },
+        default(value) {
+            return { ...this, _default: value, _optional: true, __proto__: ArgBuilderPrototype };
+        },
+        aliases(...aliases) {
+            return { ...this, _aliases: aliases, __proto__: ArgBuilderPrototype };
+        },
+    };
+    return () => ({
+        __proto__: ArgBuilderPrototype,
+        _default: undefined,
+        _description: undefined,
+        _optional: false,
+        _valueless: false,
+        _aliases: [],
+    });
+})();
 /**
  * Represents an entire application, with multiple subcommands and various functionality.
  */
@@ -36,26 +66,36 @@ export class Application {
         });
         this.sourceDirectory = "null";
     }
-    /**
-     * Adds a subcommand to this application.
-     * @param handler The function that is called when this subcommand is run.
-     * Return value handling:
-     * - If the function returns an exit code (sync or async), the app will be closed immediately with that exit code.
-     * - If the function returns undefined (sync or async), cli-app will do nothing, and NodeJS's standard behavior will occur.
-     * @param argOptions Specifies the args that can be passed to this subcommand through the command line.
-     * @param aliases List of alternative names for this command.
-     */
-    command(name, description, handler, isDefault, argOptions, aliases) {
-        this.commands[name] = new Subcommand(name, handler, description, {
-            namedArgs: argOptions?.namedArgs ?? {},
-            positionalArgs: argOptions?.positionalArgs ?? [],
-            aliases: argOptions?.aliases ?? {},
-            positionalArgCountCheck: argOptions?.positionalArgCountCheck,
-            unexpectedNamedArgCheck: argOptions?.unexpectedNamedArgCheck,
-        }, isDefault);
-        if (aliases)
-            aliases.forEach((alias) => this.alias(alias, name));
-        return this; //For daisy chaining
+    command(name, description) {
+        const app = this;
+        const CommandBuilderPrototype = {
+            description(description) {
+                return { ...this, _description: description, __proto__: CommandBuilderPrototype };
+            },
+            aliases(...aliases) {
+                return { ...this, _aliases: aliases, __proto__: CommandBuilderPrototype };
+            },
+            default() {
+                return { ...this, _default: true, __proto__: CommandBuilderPrototype };
+            },
+            args(argOptions) {
+                return {
+                    ...this,
+                    impl(impl) {
+                        app.commands[name] = new Subcommand(this._name, impl, this._description, argOptions, this._default);
+                        this._aliases.forEach(alias => app.aliases[alias] = name);
+                    }
+                };
+            },
+        };
+        const builder = {
+            __proto__: CommandBuilderPrototype,
+            _name: name,
+            _default: false,
+            _description: description,
+            _aliases: [],
+        };
+        return builder;
     }
     /** Creates an alias for a subcommand. */
     alias(alias, target) {
@@ -74,9 +114,9 @@ export class Application {
                 const aliases = Object.entries(this.aliases).filter(([alias, name]) => name == commandName).map(([alias, name]) => alias);
                 const positionalArgsFragment = command.argOptions.positionalArgs.map(opt => opt.optional ? `[<${opt.name}>]` : `<${opt.name}>`).join(" ");
                 const namedArgsFragment = Object.entries(command.argOptions.namedArgs)
-                    .map(([name, opt]) => opt.optional ?
-                    `[--${name}${opt.valueless ? `` : ` <${name}>`}]`
-                    : `--${name}${opt.valueless ? `` : ` <${name}>`}`).join(" ");
+                    .map(([name, opt]) => opt._optional ?
+                    `[--${name}${opt._valueless ? `` : ` <${name}>`}]`
+                    : `--${name}${opt._valueless ? `` : ` <${name}>`}`).join(" ");
                 const outputText = new StringBuilder()
                     .addLine()
                     .addLine(`Help for command ${command.name}:`)
@@ -87,7 +127,7 @@ export class Application {
                     .addLine();
                 if (Object.entries(command.argOptions.namedArgs).length != 0) {
                     Object.entries(command.argOptions.namedArgs)
-                        .map(([name, opt]) => `<${name}>: ${opt.description}`).forEach(line => outputText.addLine(line));
+                        .map(([name, opt]) => `<${name}>: ${opt._description}`).forEach(line => outputText.addLine(line));
                     outputText.addLine();
                 }
                 if (command.argOptions.positionalArgs.length != 0) {
@@ -250,19 +290,18 @@ export class Subcommand {
         this.defaultCommand = defaultCommand;
         //Fill in the provided arg options
         this.argOptions = {
-            namedArgs: Object.fromEntries(Object.entries(argOptions.namedArgs).map(([key, value]) => [key, {
-                    description: value.description ?? "No description provided",
-                    optional: value.default ? ("optional" in value && invalidConfig(`named argument "${key}" has a default value, therefore it is optional, but "optional" was specified again. Please delete the redundant property.`),
-                        true) : value.optional ?? (value.valueless ? true : false),
-                    default: value.default ?? null,
-                    valueless: value.valueless ?? false,
-                    aliases: (value.aliases ?? []).concat(Object.entries(argOptions.aliases ?? {}).filter(([from, to]) => from == key).map(([from, to]) => to)),
+            namedArgs: Object.fromEntries(Object.entries(argOptions.namedArgs ?? {}).map(([key, value]) => [key, {
+                    _description: value._description ?? "No description provided",
+                    _optional: value._optional,
+                    _default: value._default,
+                    _valueless: value._valueless,
+                    _aliases: value._aliases.concat(Object.entries(argOptions.aliases ?? {}).filter(([from, to]) => from == key).map(([from, to]) => to)),
                 }])),
             aliases: Object.fromEntries([
                 ...Object.entries(argOptions.aliases ?? []),
-                ...Object.entries(argOptions.namedArgs).map(([name, opts]) => opts.aliases?.map(alias => [alias, name]) ?? []).flat(),
+                ...Object.entries(argOptions.namedArgs ?? {}).map(([name, opts]) => opts._aliases?.map(alias => [alias, name]) ?? []).flat(),
             ]),
-            positionalArgs: argOptions.positionalArgs.map((a, i) => ({
+            positionalArgs: (argOptions.positionalArgs ?? []).map((a, i) => ({
                 ...a,
                 default: a.default ?? null,
                 optional: a.default ? ("optional" in a && invalidConfig(`in subcommand ${name}: positional argument ${i} has a default value, therefore it is optional, but "optional" was specified again. Please delete the redundant property.`),
@@ -271,11 +310,7 @@ export class Subcommand {
             positionalArgCountCheck: argOptions.positionalArgCountCheck ?? "ignore",
             unexpectedNamedArgCheck: argOptions.unexpectedNamedArgCheck ?? "error",
         };
-        //Validate named args
-        for (const [key, opt] of Object.entries(this.argOptions.namedArgs)) {
-            if (opt.valueless && opt.default)
-                invalidConfig(`in subcommand ${name}: named argument "${key}" with property "valueless" has a default specified, but this is meaningless`);
-        }
+        //Validating named args is not necessary as the command builder already does that
         //Validate positional args
         let optionalArgsStarted = false;
         for (const arg of this.argOptions.positionalArgs) {
@@ -291,8 +326,8 @@ export class Subcommand {
             crash("application.sourceDirectory is null. Don't call subcommand.run() directly.");
         const usageInstructionsMessage = `for usage instructions, run ${application.name} help ${this.name}`;
         const valuelessOptions = Object.entries(this.argOptions.namedArgs)
-            .filter(([k, v]) => v.valueless)
-            .map(([k, v]) => v.aliases.concat(k)).flat();
+            .filter(([k, v]) => v._valueless)
+            .map(([k, v]) => v._aliases.concat(k)).flat();
         const { namedArgs, positionalArgs } = Application.parseArgs(args, valuelessOptions);
         //Handle positional args
         if (positionalArgs.length > this.argOptions.positionalArgs.length) {
@@ -338,11 +373,11 @@ ${usageInstructionsMessage}`);
         }
         Object.entries(this.argOptions.namedArgs).forEach(([name, opt]) => {
             if (namedArgs[name] == null) { //If the named arg was not specified or was left blank
-                if (opt.default) { //If it has a default value, set it to that
-                    namedArgs[name] = opt.default;
+                if (opt._default != null) { //If it has a default value, set it to that
+                    namedArgs[name] = opt._default;
                 }
-                else if (opt.optional) {
-                    if (!opt.valueless) {
+                else if (opt._optional) {
+                    if (!opt._valueless) {
                         namedArgs[name] = name in namedArgs ? null : undefined;
                     }
                 }
@@ -350,10 +385,10 @@ ${usageInstructionsMessage}`);
                     throw new ApplicationError(
                     //If it's required, fail with an error
                     `No value specified for required named argument "${name}".
-To specify it, run the command with --${name}${opt.valueless ? "" : " <value>"}
+To specify it, run the command with --${name}${opt._valueless ? "" : " <value>"}
 ${usageInstructionsMessage}`);
             }
-            if (opt.valueless) {
+            if (opt._valueless) {
                 //Convert valueless named args to booleans
                 namedArgs[name] = (namedArgs[name] === null);
             }
