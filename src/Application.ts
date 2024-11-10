@@ -281,9 +281,9 @@ export class Application {
 	/**
 	 * Same as {@link command()}, but for applications with only one subcommand. This will slightly change the display of help messages.
 	 */
-	onlyCommand():Omit<CommandBuilder, "description"> & { _description: string; } {
+	onlyCommand(){
 		if(Object.keys(this.commands).length > 1) invalidConfig(`onlyCommand() is not valid here: there are already other commands defined`);
-		return this.command(this.name, this.description);
+		return this.command(this.name, this.description).default();
 	}
 	/** Creates an alias for a subcommand. */
 	alias(alias:string, target:string){
