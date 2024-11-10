@@ -10,20 +10,19 @@ Contains the code for the Script class, which represents an application that doe
 
 import path from "node:path";
 import fs from "node:fs";
-import { Application, Subcommand } from "./Application.js";
+import { Application, CommandHandler, Subcommand } from "./Application.js";
 import { ApplicationError, StringBuilder } from "./classes.js";
-import { ApplicationRunOptions, ArgOptions, CommandHandler, SpecificOptions } from "./types.js";
 
 
 /**
  * Represents an application that does one thing only.
  */
-export class Script<A extends Partial<ArgOptions>> {
-	defaultCommand:Subcommand<this, any>;
-	helpCommand:Subcommand<this, any>;
+export class Script {
+	defaultCommand:Subcommand<this>;
+	helpCommand:Subcommand<this>;
 	name: string;
 	sourceDirectory:string;
-	constructor(name:string, description:string, handler:CommandHandler<Script<A>, A>, argOptions?:A){
+	constructor(name:string, description:string, handler:CommandHandler, argOptions?:A){
 		this.helpCommand = new Subcommand(
 			"help",
 			this.runHelpCommand.bind(this),
@@ -39,7 +38,7 @@ export class Script<A extends Partial<ArgOptions>> {
 		);
 		this.name = name;
 		this.sourceDirectory = "null";
-		this.defaultCommand = new Subcommand<this, A>(name, handler, description, {
+		this.defaultCommand = new Subcommand<this>(name, handler, description, {
 			namedArgs: argOptions?.namedArgs ?? {},
 			positionalArgs: argOptions?.positionalArgs ?? [],
 			aliases: argOptions?.aliases ?? {}
@@ -109,11 +108,11 @@ export class Script<A extends Partial<ArgOptions>> {
 		const args = rawArgs.slice(2);
 		const parsedArgs = Application.parseArgs(args);
 
-		let command:Subcommand<this, A>;
+		let command:Subcommand<this>;
 		if("help" in parsedArgs.namedArgs || "?" in parsedArgs.namedArgs){
-			command = this.helpCommand as Subcommand<this, A>;
+			command = this.helpCommand;
 		} else {
-			command = this.defaultCommand as Subcommand<this, A>;
+			command = this.defaultCommand;
 		}
 		
 		try {
