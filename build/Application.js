@@ -11,6 +11,7 @@ import path from "node:path";
 import fs from "node:fs";
 import { ApplicationError, StringBuilder } from "./classes.js";
 import { crash, invalidConfig } from "./funcs.js";
+/** Helper function to define a named argument. Uses the builder pattern. */
 export const arg = (() => {
     const ArgBuilderPrototype = {
         description(description) {
