@@ -173,6 +173,7 @@ export declare class Application {
     };
     /** Creates an alias for a subcommand. */
     alias(alias: string, target: string): this;
+    private getOnlyCommand;
     /** Runs the help command for this application. Do not call directly. */
     private runHelpCommand;
     /**

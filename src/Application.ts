@@ -283,13 +283,16 @@ export class Application {
 		this.aliases[alias] = target;
 		return this;
 	}
+	private getOnlyCommand():string | undefined {
+		const commands = Object.keys(this.commands).filter(c => c != "help");
+		if(commands.length == 1) return commands[0];
+		else return undefined;
+	}
 	/** Runs the help command for this application. Do not call directly. */
 	private runHelpCommand(opts:Expand<ComputeOptions<Record<string, NamedArgData>>>):number {
-		if(!(this instanceof Application)){
-			throw new ApplicationError("application.runHelpCommand was bound incorrectly. This is most likely an error with cli-app.");
-		}
-		if(opts.positionalArgs[0]){
-			const commandName = this.commands[opts.positionalArgs[0]] ? opts.positionalArgs[0] : this.aliases[opts.positionalArgs[0]] ?? opts.positionalArgs[0];
+		const firstPositionalArg = opts.positionalArgs[0] ?? this.getOnlyCommand();
+		if(firstPositionalArg){
+			const commandName = this.commands[firstPositionalArg] ? firstPositionalArg : this.aliases[firstPositionalArg] ?? firstPositionalArg;
 			const command = this.commands[commandName];
 			if(command){
 				const aliases = Object.entries(this.aliases).filter(([alias, name]) => name == commandName).map(([alias, name]) => alias);
@@ -308,7 +311,7 @@ export class Application {
 					.addLine()
 					.addLine(`Help for command ${command.name}:`)
 
-					.add(`Usage: ${this.name} ${command.name}`)
+					.add((this.name == command.name && command.defaultCommand) ? `Usage: ${this.name}` : `Usage: ${this.name} ${command.name}`)
 					.addWord(positionalArgsFragment)
 					.addWord(namedArgsFragment)
 					.add("\n")
@@ -333,7 +336,7 @@ export class Application {
 				outputText.addLine(aliases.length != 0, `Aliases: ${aliases.join(", ")}`);
 				process.stdout.write(outputText.text());
 			} else {
-				console.log(`Unknown command ${opts.positionalArgs[0]}. Run ${this.name} help for a list of all commands.`);
+				console.log(`Unknown command ${firstPositionalArg}. Run ${this.name} help for a list of all commands.`);
 			}
 		} else {
 			console.log(
@@ -345,6 +348,9 @@ Usage: ${this.name} [command] [options]
 			);
 			for(const command of Object.values(this.commands)){
 				console.log(`\t${command?.name}: ${command?.description}`);
+			}
+			for(const [alias, name] of Object.entries(this.aliases)){
+				console.log(`\t${alias}: alias for ${name}`);
 			}
 
 		}
