@@ -278,12 +278,19 @@ export class Application {
 		} satisfies OmitFunctionProperties<CommandBuilderInitial> & { __proto__: any; } as never as OmitFunctionProperties<CommandBuilderInitial> & typeof CommandBuilderPrototype);
 		return builder;
 	}
+	/**
+	 * Same as {@link command()}, but for applications with only one subcommand. This will slightly change the display of help messages.
+	 */
+	onlyCommand():Omit<CommandBuilder, "description"> & { _description: string; } {
+		if(Object.keys(this.commands).length > 1) invalidConfig(`onlyCommand() is not valid here: there are already other commands defined`);
+		return this.command(this.name, this.description);
+	}
 	/** Creates an alias for a subcommand. */
 	alias(alias:string, target:string){
 		this.aliases[alias] = target;
 		return this;
 	}
-	private getOnlyCommand():string | undefined {
+	getOnlyCommand():string | undefined {
 		const commands = Object.keys(this.commands).filter(c => c != "help");
 		if(commands.length == 1) return commands[0];
 		else return undefined;
@@ -533,7 +540,9 @@ export class Subcommand {
 		
 		if(application.sourceDirectory == "null")
 			crash("application.sourceDirectory is null. Don't call subcommand.run() directly.");
-		const usageInstructionsMessage = `for usage instructions, run ${application.name} help ${this.name}`;
+		const usageInstructionsMessage = application.getOnlyCommand() != null ?
+			`for usage instructions, run ${application.name} --help`
+		:	`for usage instructions, run ${application.name} help ${this.name}`;
 
 
 		const valuelessOptions = Object.entries(this.argOptions.namedArgs)

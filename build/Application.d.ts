@@ -171,9 +171,15 @@ export declare class Application {
     command(name: string, description: string): Omit<CommandBuilder, "description"> & {
         _description: string;
     };
+    /**
+     * Same as {@link command()}, but for applications with only one subcommand. This will slightly change the display of help messages.
+     */
+    onlyCommand(): Omit<CommandBuilder, "description"> & {
+        _description: string;
+    };
     /** Creates an alias for a subcommand. */
     alias(alias: string, target: string): this;
-    private getOnlyCommand;
+    getOnlyCommand(): string | undefined;
     /** Runs the help command for this application. Do not call directly. */
     private runHelpCommand;
     /**

@@ -98,6 +98,14 @@ export class Application {
         };
         return builder;
     }
+    /**
+     * Same as {@link command()}, but for applications with only one subcommand. This will slightly change the display of help messages.
+     */
+    onlyCommand() {
+        if (Object.keys(this.commands).length > 1)
+            invalidConfig(`onlyCommand() is not valid here: there are already other commands defined`);
+        return this.command(this.name, this.description);
+    }
     /** Creates an alias for a subcommand. */
     alias(alias, target) {
         this.aliases[alias] = target;
@@ -333,7 +341,9 @@ export class Subcommand {
     run(args, application) {
         if (application.sourceDirectory == "null")
             crash("application.sourceDirectory is null. Don't call subcommand.run() directly.");
-        const usageInstructionsMessage = `for usage instructions, run ${application.name} help ${this.name}`;
+        const usageInstructionsMessage = application.getOnlyCommand() != null ?
+            `for usage instructions, run ${application.name} --help`
+            : `for usage instructions, run ${application.name} help ${this.name}`;
         const valuelessOptions = Object.entries(this.argOptions.namedArgs)
             .filter(([k, v]) => v._valueless)
             .map(([k, v]) => v._aliases.concat(k)).flat();
