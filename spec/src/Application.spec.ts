@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-empty-function */
 /*
 Copyright © <BalaM314>, 2024.
 This file is part of cli-app.
@@ -31,7 +32,7 @@ describe("Application", () => {
 			}
 		}).impl((opts, app) => {
 			types<string, typeof opts.namedArgs["namedarg1"]>().areEqual();
-			expect(opts.namedArgs["namedarg1"]).toEqual("namedvalue1");
+			expect(opts.namedArgs.namedarg1).toEqual("namedvalue1");
 		});
 
 		spyOn(app.commands["cmd1"]!, "handler").and.callThrough();
@@ -49,8 +50,8 @@ describe("Application", () => {
 		}).impl((opts, app) => {
 			types<typeof opts.namedArgs["passed_without_value"], string | null | undefined>().areEqual();
 			types<typeof opts.namedArgs["not_passed"], string | null | undefined>().areEqual();
-			expect(opts.namedArgs["passed_without_value"]).toEqual(null);
-			expect(opts.namedArgs["not_passed"]).toEqual(undefined);
+			expect(opts.namedArgs.passed_without_value).toEqual(null);
+			expect(opts.namedArgs.not_passed).toEqual(undefined);
 			expect("not_passed" in opts.namedArgs).toEqual(true);
 		});
 
@@ -220,9 +221,9 @@ describe("Application", () => {
 			types<typeof opts.namedArgs.optional4, string | undefined | null>().areEqual();
 			types<typeof opts.namedArgs.optional5, string | undefined | null>().areEqual();
 			types<typeof opts.namedArgs.optional6, string | undefined | null>().areEqual();
-			expect(opts.namedArgs["optional1"]).toEqual("defaultValue1");
-			expect(opts.namedArgs["optional2"]).toEqual("defaultValue2");
-			expect(opts.namedArgs["optional3"]).toEqual("modified");
+			expect(opts.namedArgs.optional1).toEqual("defaultValue1");
+			expect(opts.namedArgs.optional2).toEqual("defaultValue2");
+			expect(opts.namedArgs.optional3).toEqual("modified");
 			expect(opts.namedArgs.optional4).toEqual("value4");
 			expect(opts.namedArgs.optional5).toEqual(undefined);
 			expect("optional5" in opts.namedArgs).toEqual(true);
@@ -316,8 +317,8 @@ describe("Application", () => {
 				alias2: "namedarg2"
 			}
 		}).impl((opts, app) => {
-			expect(opts.namedArgs["namedarg1"]).toEqual("namedvalue1");
-			expect(opts.namedArgs["namedarg2"]).toEqual("namedvalue2");
+			expect(opts.namedArgs.namedarg1).toEqual("namedvalue1");
+			expect(opts.namedArgs.namedarg2).toEqual("namedvalue2");
 		});
 
 		spyOn(app.commands["cmd1"]!, "handler").and.callThrough();

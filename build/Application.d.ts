@@ -15,7 +15,7 @@ export type ApplicationRunOptions = {
     readonly exitProcessOnHandlerReturn?: boolean;
 };
 /** Passed while defining a command. */
-export interface PositionalArgOptions {
+export type PositionalArgOptions = {
     readonly name: string;
     readonly description: string;
     /**
@@ -26,7 +26,7 @@ export interface PositionalArgOptions {
     readonly optional?: boolean;
     /**A default value for the argument. */
     readonly default?: string | null;
-}
+};
 /** Passed while defining a command. */
 export type ArgOptions<TNamedArgs extends Record<string, NamedArgData> = Record<string, NamedArgData>> = {
     /** Named arguments, which are passed like `--name value` or `--name=value`. */
@@ -47,13 +47,13 @@ export type ArgOptions<TNamedArgs extends Record<string, NamedArgData> = Record<
     readonly unexpectedNamedArgCheck?: "error" | "warn" | "ignore";
 };
 /** Computes the type of the arguments passed to a command's handler, given the parameters defined previously. */
-export interface ComputeOptions<TNamedArgs extends Record<string, NamedArgData> = Record<string, NamedArgData>> {
+export type ComputeOptions<TNamedArgs extends Record<string, NamedArgData> = Record<string, NamedArgData>> = {
     /** All named args specified with --name value. */
     readonly namedArgs: {} extends TNamedArgs ? {} : Record<string, NamedArgData> extends TNamedArgs ? Record<string, string | boolean | undefined | null> : NamedArgs<TNamedArgs>;
     /** Positional args specified by simply stating them. */
-    readonly positionalArgs: (string | undefined)[];
+    readonly positionalArgs: Array<string | undefined>;
     readonly commandName: string;
-}
+};
 type NamedArgs<NamedArgOpts extends Record<string, NamedArgData>> = {
     [K in keyof NamedArgOpts]: NamedArgFrom<NamedArgOpts[K]>;
 };
@@ -136,9 +136,7 @@ export declare class Application {
     /** Stores all subcommands. */
     commands: Record<string, Subcommand | undefined>;
     /** Stores all command aliases. */
-    aliases: {
-        [alias: string]: string;
-    };
+    aliases: Record<string, string>;
     /** The directory containing this application's main file. Uses slash or backslash dependent on platform. */
     sourceDirectory: string;
     constructor(

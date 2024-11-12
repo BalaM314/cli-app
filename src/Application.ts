@@ -31,7 +31,7 @@ export type ApplicationRunOptions = {
 };
 
 /** Passed while defining a command. */
-export interface PositionalArgOptions {
+export type PositionalArgOptions = {
 	readonly name: string;
 	readonly description: string;
 	/**
@@ -65,14 +65,14 @@ export type ArgOptions<TNamedArgs extends Record<string, NamedArgData> = Record<
 };
 
 /** Computes the type of the arguments passed to a command's handler, given the parameters defined previously. */
-export interface ComputeOptions<TNamedArgs extends Record<string, NamedArgData> = Record<string, NamedArgData>> {
+export type ComputeOptions<TNamedArgs extends Record<string, NamedArgData> = Record<string, NamedArgData>> = {
 	/** All named args specified with --name value. */
 	readonly namedArgs:
 		{} extends TNamedArgs ? {} :
 		Record<string, NamedArgData> extends TNamedArgs ? Record<string, string | boolean | undefined | null> :
 		NamedArgs<TNamedArgs>;
 	/** Positional args specified by simply stating them. */
-	readonly positionalArgs: (string | undefined)[]; //TODO typedef
+	readonly positionalArgs: Array<string | undefined>; //TODO typedef
 	readonly commandName: string;
 }
 
@@ -195,9 +195,7 @@ export class Application {
 	/** Stores all subcommands. */
 	commands: Record<string, Subcommand | undefined> = {};
 	/** Stores all command aliases. */
-	aliases: {
-		[alias: string]: string;
-	} = {};
+	aliases: Record<string, string> = {};
 	/** The directory containing this application's main file. Uses slash or backslash dependent on platform. */
 	public sourceDirectory:string;
 	constructor(
@@ -375,6 +373,10 @@ Usage: ${this.name} [command] [options]
 		/** Set if the first argument passed is a positional argument. */
 		firstPositionalArg: string | undefined;
 	} {
+		const __nameEqualsValue = /^--([\s\S]+?)=([\s\S]+?)$/;
+		const __name = /^--([\s\S]+)/;
+		const _name = /^-(\w+)/;
+
 		const namedArgs: Record<string, string | null> = {};
 		const positionalArgs:string[] = [];
 		let i = 0;
@@ -386,15 +388,17 @@ Usage: ${this.name} [command] [options]
 
 			const arg = args.shift(); //Grab the first arg
 			if(arg == undefined) break; //If it doesn't exist, return
+
+			let matchResult;
 			if(arg == "--"){ //Arg separator
 				//Everything else should be considered a positional argument
 				positionalArgs.push(arg, ...args);
 				break;
-			} else if(arg.match(/^--([\s\S]+?)=([\s\S]+?)$/)){ //--name=value form
-				const [, name, value] = arg.match(/^--([\s\S]+?)=([\s\S]+?)$/)!;
+			} else if((matchResult = arg.match(__nameEqualsValue) as [string, string, string] | null)){ //--name=value form
+				const [, name, value] = matchResult;
 				namedArgs[name] = value;
-			} else if(arg.match(/^--([\s\S]+)/)){ //Starts with two hyphens
-				const argName = arg.match(/^--([\s\S]+)/)![1];
+			} else if((matchResult = arg.match(__name) as [string, string] | null)){ //Starts with two hyphens
+				const argName = matchResult[1];
 				if(args[0]?.startsWith("-") || valuelessOptions.includes(argName)){
 					//If the next arg also starts with a hyphen, or the arg name is valueless, set it to null
 					namedArgs[argName] = null;
@@ -402,8 +406,8 @@ Usage: ${this.name} [command] [options]
 					//Otherwise, pop off the first arg and set it to that
 					namedArgs[argName] = args.shift() ?? null;
 				}
-			} else if(arg.match(/^-(\w+)/)){ //Starts with one hyphen
-				const argName = arg.match(/^-(\w+)/)![1];
+			} else if((matchResult = arg.match(_name) as [string, string] | null)){ //Starts with one hyphen
+				const argName = matchResult[1];
 				//Compound arg form:
 				//iftop -nPNi eth0 means
 				//iftop -n -P -N -i eth0
@@ -442,8 +446,9 @@ Usage: ${this.name} [command] [options]
 		exitProcessOnHandlerReturn = true,
 		throwOnError = false,
 	}:ApplicationRunOptions = {}):Promise<void> {
+		if(rawArgs.length < 2) crash(`Application.run() received invalid argv: process.argv should include with "node path/to/filename.js" followed`);
 		//This function does as little work as possible, and calls Subcommand.run()
-		this.sourceDirectory = path.join(fs.realpathSync(rawArgs[1]), "..");
+		this.sourceDirectory = path.join(fs.realpathSync(rawArgs[1]!), "..");
 
 		//We need to do some argument parsing to determine which subcommand to run
 		//but, once the subcommand has been determined, valueless args may change the parse result
@@ -454,7 +459,7 @@ Usage: ${this.name} [command] [options]
 		const { namedArgs, firstPositionalArg } = Application.parseArgs(args);
 		//Set "help" to the default command: if someone runs `command nonexistentsubcommand ...rest`,
 		//it will get interpreted as `command help nonexistentsubcommand ...rest`, which will generate the correct error message.
-		const defaultCommand = Object.values(this.commands).filter(command => command?.defaultCommand)[0] ?? this.commands["help"]!; //TODO compute in .command()
+		const defaultCommand = Object.values(this.commands).find(command => command?.defaultCommand) ?? this.commands["help"]!; //TODO compute in .command()
 		const [newArgs, command]:readonly [string[], Subcommand] = (() => {
 			if("help" in namedArgs || "?" in namedArgs){
 				return [args, this.commands["help"]!];
@@ -495,9 +500,9 @@ export class Subcommand {
 	constructor(
 		public name:string,
 		public handler:CommandHandler<any>,
-		public description:string = "No description provided",
+		public description = "No description provided",
 		argOptions:ArgOptions<Record<string, NamedArgData>> = {namedArgs: {}, positionalArgs: []},
-		public defaultCommand:boolean = false
+		public defaultCommand = false
 	){
 		//Fill in the provided arg options
 		this.argOptions = {
@@ -550,7 +555,7 @@ export class Subcommand {
 			.map(([k, v]) => v._aliases.concat(k)).flat();
 		const { namedArgs, positionalArgs }:{
 			namedArgs: Record<string, string | boolean | undefined | null>;
-			positionalArgs: (string | undefined)[];
+			positionalArgs: Array<string | undefined>;
 		} = Application.parseArgs(args, valuelessOptions);
 
 

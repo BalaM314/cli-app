@@ -10,7 +10,7 @@ Contains type definitions.
 
 /**Makes every property in an object and all of its child objects required. */
 export type RequiredRecursive<T> = 
-	T extends Array<infer A> ? RequiredRecursive<A>[] :
+	T extends Array<infer A> ? Array<RequiredRecursive<A>> :
 	{
 		[P in keyof T]-?: RequiredRecursive<T[P]>;
 	};

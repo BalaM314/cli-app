@@ -1,5 +1,5 @@
 /**Makes every property in an object and all of its child objects required. */
-export type RequiredRecursive<T> = T extends Array<infer A> ? RequiredRecursive<A>[] : {
+export type RequiredRecursive<T> = T extends Array<infer A> ? Array<RequiredRecursive<A>> : {
     [P in keyof T]-?: RequiredRecursive<T[P]>;
 };
 export type isFalseOrUnknown<T> = unknown extends T ? true : false extends T ? true : false;

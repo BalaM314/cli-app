@@ -39,10 +39,7 @@ myApp.command("doOtherStuff")
 		aliases: {},
 		positionalArgs: []
 	})
-	//.default()
 	.impl((opts, app) => {
-		opts;
-		//^?
 		console.log(`named arg required: ${opts.namedArgs["required"]}`);
 		console.log(`named arg optional: ${opts.namedArgs["optional"]}`);
 		console.log(`named arg defaultVal: ${opts.namedArgs["defaultVal"]}`);

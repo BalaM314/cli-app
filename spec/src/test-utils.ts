@@ -24,7 +24,9 @@ export function types<A, B>():[A] extends [B] ? [B] extends [A] ? {
 	areEqual():void;
 } : false : false {
 	return {
-		areEqual(){}
+		areEqual(){
+			//empty
+		}
 	} as never;
 }
 

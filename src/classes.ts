@@ -17,7 +17,7 @@ export class ApplicationError extends Error {
 
 /**Useful for building very long strings. */
 export class StringBuilder {
-	buffer:string = "";
+	buffer = "";
 	constructor(){return this;}
 
 	add(message:string):StringBuilder;

@@ -177,6 +177,9 @@ Usage: ${this.name} [command] [options]
      * @returns Formatted args.
      */
     static parseArgs(providedArgs, valuelessOptions = []) {
+        const __nameEqualsValue = /^--([\s\S]+?)=([\s\S]+?)$/;
+        const __name = /^--([\s\S]+)/;
+        const _name = /^-(\w+)/;
         const namedArgs = {};
         const positionalArgs = [];
         let i = 0;
@@ -189,17 +192,18 @@ Usage: ${this.name} [command] [options]
             const arg = args.shift(); //Grab the first arg
             if (arg == undefined)
                 break; //If it doesn't exist, return
+            let matchResult;
             if (arg == "--") { //Arg separator
                 //Everything else should be considered a positional argument
                 positionalArgs.push(arg, ...args);
                 break;
             }
-            else if (arg.match(/^--([\s\S]+?)=([\s\S]+?)$/)) { //--name=value form
-                const [, name, value] = arg.match(/^--([\s\S]+?)=([\s\S]+?)$/);
+            else if ((matchResult = arg.match(__nameEqualsValue))) { //--name=value form
+                const [, name, value] = matchResult;
                 namedArgs[name] = value;
             }
-            else if (arg.match(/^--([\s\S]+)/)) { //Starts with two hyphens
-                const argName = arg.match(/^--([\s\S]+)/)[1];
+            else if ((matchResult = arg.match(__name))) { //Starts with two hyphens
+                const argName = matchResult[1];
                 if (args[0]?.startsWith("-") || valuelessOptions.includes(argName)) {
                     //If the next arg also starts with a hyphen, or the arg name is valueless, set it to null
                     namedArgs[argName] = null;
@@ -209,8 +213,8 @@ Usage: ${this.name} [command] [options]
                     namedArgs[argName] = args.shift() ?? null;
                 }
             }
-            else if (arg.match(/^-(\w+)/)) { //Starts with one hyphen
-                const argName = arg.match(/^-(\w+)/)[1];
+            else if ((matchResult = arg.match(_name))) { //Starts with one hyphen
+                const argName = matchResult[1];
                 //Compound arg form:
                 //iftop -nPNi eth0 means
                 //iftop -n -P -N -i eth0
@@ -248,6 +252,8 @@ Usage: ${this.name} [command] [options]
      * @param options Used for testing.
      */
     async run(rawArgs, { exitProcessOnHandlerReturn = true, throwOnError = false, } = {}) {
+        if (rawArgs.length < 2)
+            crash(`Application.run() received invalid argv: process.argv should include with "node path/to/filename.js" followed`);
         //This function does as little work as possible, and calls Subcommand.run()
         this.sourceDirectory = path.join(fs.realpathSync(rawArgs[1]), "..");
         //We need to do some argument parsing to determine which subcommand to run
@@ -259,7 +265,7 @@ Usage: ${this.name} [command] [options]
         const { namedArgs, firstPositionalArg } = Application.parseArgs(args);
         //Set "help" to the default command: if someone runs `command nonexistentsubcommand ...rest`,
         //it will get interpreted as `command help nonexistentsubcommand ...rest`, which will generate the correct error message.
-        const defaultCommand = Object.values(this.commands).filter(command => command?.defaultCommand)[0] ?? this.commands["help"]; //TODO compute in .command()
+        const defaultCommand = Object.values(this.commands).find(command => command?.defaultCommand) ?? this.commands["help"]; //TODO compute in .command()
         const [newArgs, command] = (() => {
             if ("help" in namedArgs || "?" in namedArgs) {
                 return [args, this.commands["help"]];
