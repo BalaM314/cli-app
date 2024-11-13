@@ -45,12 +45,12 @@ export class StringBuilder {
 	}
 
 	addLine():StringBuilder;
-	addLine(message:string):StringBuilder;
+	addLine(message:string | undefined):StringBuilder;
 	addLine(condition:boolean, message:string):StringBuilder;
 	addLine(arg1?:string | boolean, arg2?:string){
 		if(arg1 == undefined){
 			this.buffer += "\n";
-		} else if(typeof arg1 == "string"){
+		} else if(typeof arg1 == "string" && arg1.trim().length > 0){
 			this.buffer += arg1;
 			this.buffer += "\n";
 		} else if(arg1){

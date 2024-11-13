@@ -37,6 +37,10 @@ export default tseslint.config(
 			"prefer-const": "warn",
 			"no-unexpected-multiline": "off",
 			"no-empty": ["warn", {"allowEmptyCatch": true}],
+			'@typescript-eslint/dot-notation': ["warn", {
+				"allowPrivateClassPropertyAccess": true,
+				"allowProtectedClassPropertyAccess": true,
+			}],
 			"@typescript-eslint/no-unused-vars": "off",
 			"@typescript-eslint/no-unsafe-function-type": "off",
 			"@typescript-eslint/no-empty-object-type": "off",

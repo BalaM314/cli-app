@@ -35,7 +35,7 @@ export const testOptions:ApplicationRunOptions = {
 	exitProcessOnHandlerReturn: false,
 };
 
-export const fakePathToApp = path.join(process.cwd(), "test.js");
+export const fakePathToApp = path.join(process.cwd(), "build/test.js");
 
 export function runApp(app:Application, parameters: string[]){
 	return app.run(["node", fakePathToApp, ...parameters], testOptions);
