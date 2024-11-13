@@ -45,6 +45,11 @@ export type ArgOptions<TNamedArgs extends Record<string, NamedArgData> = Record<
      * @default "error".
      */
     readonly unexpectedNamedArgCheck?: "error" | "warn" | "ignore";
+    /**
+     * Whether to convert `app commandName --help` to `app help commandName`.
+     * @default true
+     */
+    readonly allowHelpNamedArg?: boolean;
 };
 /** Computes the type of the arguments passed to a command's handler, given the parameters defined previously. */
 export type ComputeOptions<TNamedArgs extends Record<string, NamedArgData> = Record<string, NamedArgData>> = {
@@ -53,9 +58,16 @@ export type ComputeOptions<TNamedArgs extends Record<string, NamedArgData> = Rec
     /** Positional args specified by simply stating them. */
     readonly positionalArgs: Array<string | undefined>;
     readonly commandName: string;
+    /** All named and positional arguments passed to the command, not including the command name. */
+    readonly unparsedArgs: readonly string[];
+    /**
+     * The first 2 arguments from process.argv.
+     * Should have the value `["node", "/path/to/file.js"]`
+     */
+    readonly nodeArgs: readonly [string, string];
 };
 type NamedArgs<NamedArgOpts extends Record<string, NamedArgData>> = {
-    [K in keyof NamedArgOpts]: NamedArgFrom<NamedArgOpts[K]>;
+    -readonly [K in keyof NamedArgOpts]: NamedArgFrom<NamedArgOpts[K]>;
 };
 type NamedArgFrom<NamedArgOpt extends NamedArgData> = NamedArgOpt["_valueless"] extends true ? NamedArgOpt["_optional"] extends false ? true : (false | true) : NamedArgOpt["_optional"] extends true ? NamedArgOpt["_default"] extends string ? string : (string | undefined | null) : string;
 export type CommandHandler<T extends Record<string, NamedArgData>> = (opts: Expand<ComputeOptions<T>>, app: Application) => void | number | Promise<void | number>;
@@ -204,14 +216,14 @@ export declare class Application {
 export declare class Subcommand {
     name: string;
     handler: CommandHandler<any>;
-    description: string;
+    description: string | undefined;
     defaultCommand: boolean;
     /**
      * Information describing the command-line options that this subcommand accepts.
      */
     argOptions: Required<ArgOptions<Record<string, NamedArgData>>>;
-    constructor(name: string, handler: CommandHandler<any>, description?: string, argOptions?: ArgOptions<Record<string, NamedArgData>>, defaultCommand?: boolean);
+    constructor(name: string, handler: CommandHandler<any>, description: string | undefined, argOptions?: ArgOptions<Record<string, NamedArgData>>, defaultCommand?: boolean);
     /** Runs this subcommand. Do not call directly, call the application's run method instead. */
-    run(args: readonly string[], application: Application): number | void | Promise<number | void>;
+    run(args: readonly string[], nodeArgs: [string, string], application: Application): number | void | Promise<number | void>;
 }
 export {};

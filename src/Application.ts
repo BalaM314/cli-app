@@ -62,6 +62,11 @@ export type ArgOptions<TNamedArgs extends Record<string, NamedArgData> = Record<
 	 * @default "error".
 	 */
 	readonly unexpectedNamedArgCheck?: "error" | "warn" | "ignore";
+	/**
+	 * Whether to convert `app commandName --help` to `app help commandName`.
+	 * @default true
+	 */
+	readonly allowHelpNamedArg?: boolean;
 };
 
 /** Computes the type of the arguments passed to a command's handler, given the parameters defined previously. */
@@ -74,10 +79,17 @@ export type ComputeOptions<TNamedArgs extends Record<string, NamedArgData> = Rec
 	/** Positional args specified by simply stating them. */
 	readonly positionalArgs: Array<string | undefined>; //TODO typedef
 	readonly commandName: string;
+	/** All named and positional arguments passed to the command, not including the command name. */
+	readonly unparsedArgs: readonly string[];
+	/**
+	 * The first 2 arguments from process.argv.
+	 * Should have the value `["node", "/path/to/file.js"]`
+	 */
+	readonly nodeArgs: readonly [string, string];
 }
 
 type NamedArgs<NamedArgOpts extends Record<string, NamedArgData>> = {
-	[K in keyof NamedArgOpts]: NamedArgFrom<NamedArgOpts[K]>;
+	-readonly [K in keyof NamedArgOpts]: NamedArgFrom<NamedArgOpts[K]>;
 };
 
 type NamedArgFrom<NamedArgOpt extends NamedArgData> =
@@ -289,8 +301,8 @@ export class Application {
 		return this;
 	}
 	getOnlyCommand():string | undefined {
-		const commands = Object.keys(this.commands).filter(c => c != "help");
-		if(commands.length == 1) return commands[0];
+		const commands = Object.entries(this.commands).filter(([name, command]) => name != "help" && command?.name == this.name);
+		if(commands.length == 1) return commands[0]![0];
 		else return undefined;
 	}
 	/** Runs the help command for this application. Do not call directly. */
@@ -315,11 +327,11 @@ export class Application {
 				const outputText = new StringBuilder()
 					.addLine()
 					.addLine(`Help for command ${command.name}:`)
-
+					.addLine(command.description)
 					.add((this.name == command.name && command.defaultCommand) ? `Usage: ${this.name}` : `Usage: ${this.name} ${command.name}`)
 					.addWord(positionalArgsFragment)
 					.addWord(namedArgsFragment)
-					.add("\n")
+					.addLine()
 					.addLine();
 
 				if(Object.entries(command.argOptions.namedArgs).length != 0){
@@ -446,8 +458,11 @@ Usage: ${this.name} [command] [options]
 		exitProcessOnHandlerReturn = true,
 		throwOnError = false,
 	}:ApplicationRunOptions = {}):Promise<void> {
-		if(rawArgs.length < 2) crash(`Application.run() received invalid argv: process.argv should include with "node path/to/filename.js" followed`);
 		//This function does as little work as possible, and calls Subcommand.run()
+
+		if(rawArgs.length < 2) crash(`Application.run() received invalid argv: process.argv should include with "node path/to/filename.js" followed`);
+		const nodeArgs = rawArgs.slice(0, 2) as [string, string];
+
 		this.sourceDirectory = path.join(fs.realpathSync(rawArgs[1]!), "..");
 
 		//We need to do some argument parsing to determine which subcommand to run
@@ -460,19 +475,24 @@ Usage: ${this.name} [command] [options]
 		//Set "help" to the default command: if someone runs `command nonexistentsubcommand ...rest`,
 		//it will get interpreted as `command help nonexistentsubcommand ...rest`, which will generate the correct error message.
 		const defaultCommand = Object.values(this.commands).find(command => command?.defaultCommand) ?? this.commands["help"]!; //TODO compute in .command()
-		const [newArgs, command]:readonly [string[], Subcommand] = (() => {
-			if("help" in namedArgs || "?" in namedArgs){
-				return [args, this.commands["help"]!];
-			} else if(firstPositionalArg && this.commands[firstPositionalArg]){
+		let [newArgs, command]:readonly [string[], Subcommand] = (() => {
+			if(firstPositionalArg && this.commands[firstPositionalArg]){
 				return [args.slice(1), this.commands[firstPositionalArg]];
 			} else if(firstPositionalArg && this.aliases[firstPositionalArg]){
 				return [args.slice(1), this.commands[this.aliases[firstPositionalArg]]
 					?? invalidConfig(`Subcommand "${firstPositionalArg}" was aliased to ${this.aliases[firstPositionalArg]}, which is not a valid command`)];
 			} else return [args, defaultCommand];
 		})();
+		if(command.argOptions.allowHelpNamedArg){
+			if("help" in namedArgs || "?" in namedArgs){
+				command = this.commands["help"]!;
+				//Revert removal of the first arg, the help command needs that
+				newArgs = args;
+			}
+		}
 
 		try {
-			const result = await command.run(newArgs, this);
+			const result = await command.run(newArgs, nodeArgs, this);
 			if(typeof result == "number"){
 				if(exitProcessOnHandlerReturn) process.exit(result);
 				else if(result != 0) throw new Error(`Non-zero exit code: ${result}`);
@@ -500,7 +520,7 @@ export class Subcommand {
 	constructor(
 		public name:string,
 		public handler:CommandHandler<any>,
-		public description = "No description provided",
+		public description:string | undefined,
 		argOptions:ArgOptions<Record<string, NamedArgData>> = {namedArgs: {}, positionalArgs: []},
 		public defaultCommand = false
 	){
@@ -529,6 +549,7 @@ export class Subcommand {
 			})) ?? [],
 			positionalArgCountCheck: argOptions.positionalArgCountCheck ?? "ignore",
 			unexpectedNamedArgCheck: argOptions.unexpectedNamedArgCheck ?? "error",
+			allowHelpNamedArg: argOptions.allowHelpNamedArg ?? true,
 		};
 
 		//Validating named args is not necessary as the command builder already does that
@@ -541,7 +562,7 @@ export class Subcommand {
 		}
 	}
 	/** Runs this subcommand. Do not call directly, call the application's run method instead. */
-	run(args:readonly string[], application:Application){
+	run(args:readonly string[], nodeArgs:[string, string], application:Application){
 		
 		if(application.sourceDirectory == "null")
 			crash("application.sourceDirectory is null. Don't call subcommand.run() directly.");
@@ -622,6 +643,8 @@ ${usageInstructionsMessage}`
 			commandName: this.name,
 			positionalArgs,
 			namedArgs,
+			unparsedArgs: args,
+			nodeArgs,
 		}, application);
 	}
 }

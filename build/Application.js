@@ -112,9 +112,9 @@ export class Application {
         return this;
     }
     getOnlyCommand() {
-        const commands = Object.keys(this.commands).filter(c => c != "help");
+        const commands = Object.entries(this.commands).filter(([name, command]) => name != "help" && command?.name == this.name);
         if (commands.length == 1)
-            return commands[0];
+            return commands[0][0];
         else
             return undefined;
     }
@@ -134,10 +134,11 @@ export class Application {
                 const outputText = new StringBuilder()
                     .addLine()
                     .addLine(`Help for command ${command.name}:`)
+                    .addLine(command.description)
                     .add((this.name == command.name && command.defaultCommand) ? `Usage: ${this.name}` : `Usage: ${this.name} ${command.name}`)
                     .addWord(positionalArgsFragment)
                     .addWord(namedArgsFragment)
-                    .add("\n")
+                    .addLine()
                     .addLine();
                 if (Object.entries(command.argOptions.namedArgs).length != 0) {
                     Object.entries(command.argOptions.namedArgs)
@@ -252,9 +253,10 @@ Usage: ${this.name} [command] [options]
      * @param options Used for testing.
      */
     async run(rawArgs, { exitProcessOnHandlerReturn = true, throwOnError = false, } = {}) {
+        //This function does as little work as possible, and calls Subcommand.run()
         if (rawArgs.length < 2)
             crash(`Application.run() received invalid argv: process.argv should include with "node path/to/filename.js" followed`);
-        //This function does as little work as possible, and calls Subcommand.run()
+        const nodeArgs = rawArgs.slice(0, 2);
         this.sourceDirectory = path.join(fs.realpathSync(rawArgs[1]), "..");
         //We need to do some argument parsing to determine which subcommand to run
         //but, once the subcommand has been determined, valueless args may change the parse result
@@ -266,11 +268,8 @@ Usage: ${this.name} [command] [options]
         //Set "help" to the default command: if someone runs `command nonexistentsubcommand ...rest`,
         //it will get interpreted as `command help nonexistentsubcommand ...rest`, which will generate the correct error message.
         const defaultCommand = Object.values(this.commands).find(command => command?.defaultCommand) ?? this.commands["help"]; //TODO compute in .command()
-        const [newArgs, command] = (() => {
-            if ("help" in namedArgs || "?" in namedArgs) {
-                return [args, this.commands["help"]];
-            }
-            else if (firstPositionalArg && this.commands[firstPositionalArg]) {
+        let [newArgs, command] = (() => {
+            if (firstPositionalArg && this.commands[firstPositionalArg]) {
                 return [args.slice(1), this.commands[firstPositionalArg]];
             }
             else if (firstPositionalArg && this.aliases[firstPositionalArg]) {
@@ -280,8 +279,15 @@ Usage: ${this.name} [command] [options]
             else
                 return [args, defaultCommand];
         })();
+        if (command.argOptions.allowHelpNamedArg) {
+            if ("help" in namedArgs || "?" in namedArgs) {
+                command = this.commands["help"];
+                //Revert removal of the first arg, the help command needs that
+                newArgs = args;
+            }
+        }
         try {
-            const result = await command.run(newArgs, this);
+            const result = await command.run(newArgs, nodeArgs, this);
             if (typeof result == "number") {
                 if (exitProcessOnHandlerReturn)
                     process.exit(result);
@@ -306,7 +312,7 @@ Usage: ${this.name} [command] [options]
  * Represents one subcommand of an application or script.
  */
 export class Subcommand {
-    constructor(name, handler, description = "No description provided", argOptions = { namedArgs: {}, positionalArgs: [] }, defaultCommand = false) {
+    constructor(name, handler, description, argOptions = { namedArgs: {}, positionalArgs: [] }, defaultCommand = false) {
         this.name = name;
         this.handler = handler;
         this.description = description;
@@ -332,6 +338,7 @@ export class Subcommand {
             })) ?? [],
             positionalArgCountCheck: argOptions.positionalArgCountCheck ?? "ignore",
             unexpectedNamedArgCheck: argOptions.unexpectedNamedArgCheck ?? "error",
+            allowHelpNamedArg: argOptions.allowHelpNamedArg ?? true,
         };
         //Validating named args is not necessary as the command builder already does that
         //Validate positional args
@@ -344,7 +351,7 @@ export class Subcommand {
         }
     }
     /** Runs this subcommand. Do not call directly, call the application's run method instead. */
-    run(args, application) {
+    run(args, nodeArgs, application) {
         if (application.sourceDirectory == "null")
             crash("application.sourceDirectory is null. Don't call subcommand.run() directly.");
         const usageInstructionsMessage = application.getOnlyCommand() != null ?
@@ -422,6 +429,8 @@ ${usageInstructionsMessage}`);
             commandName: this.name,
             positionalArgs,
             namedArgs,
+            unparsedArgs: args,
+            nodeArgs,
         }, application);
     }
 }
