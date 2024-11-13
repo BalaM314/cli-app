@@ -9,7 +9,7 @@ Contains the code for the Application class, which represents a command-line app
 */
 
 import path from "node:path";
-import fs from "node:fs";
+import fs, { openSync } from "node:fs";
 import { ApplicationError, StringBuilder } from "./classes.js";
 import type { Expand, OmitFunctionProperties, PickFunctionProperties } from "./types.js";
 import { crash, invalidConfig } from "./funcs.js";
@@ -210,6 +210,7 @@ export class Application {
 	aliases: Record<string, string> = {};
 	/** The directory containing this application's main file. Uses slash or backslash dependent on platform. */
 	public sourceDirectory:string;
+	private currentRunOptions: ApplicationRunOptions | null = null;
 	constructor(
 		/** The name used to run this application. Will be used in error suggestions. */
 		public name:string,
@@ -235,6 +236,7 @@ export class Application {
 	/**
 	 * Adds a subcommand to this application.
 	 * Uses the builder pattern.
+	 * 
 	 * Example usage:
 	 * ```
 	 * myApp.command("subcommand1")
@@ -273,6 +275,7 @@ export class Application {
 				return {
 					...this,
 					impl(impl){
+						if(app.commands[name]) invalidConfig(`Cannot register a command with name "${name}" because there is already a command with that name`);
 						app.commands[name] = new Subcommand(this._name, impl, this._description, argOptions, this._default);
 						this._aliases.forEach(alias => app.aliases[alias] = name);
 					}
@@ -295,6 +298,41 @@ export class Application {
 		if(Object.keys(this.commands).length > 1) invalidConfig(`onlyCommand() is not valid here: there are already other commands defined`);
 		return this.command(this.name, this.description).default();
 	}
+	/**
+	 * Creates a new category of commands, which can be invoked by passing the category name before the command name.
+	 * 
+	 * Example usage:
+	 * ```
+	 * myApp.category("category1", "For category1 related commands.", cat => {
+	 * 	cat.command("subcommand1")
+	 * 		.description("Does subcommand1 things.")
+	 * 		.args({})
+	 * 		.impl(() => {});
+	 * 	cat.command("subcommand2")
+	 * 		.description("Does subcommand2 things.")
+	 * 		.args({})
+	 * 		.impl(() => {});
+	 * });
+	 * ```
+	 * At the command line:
+	 * - `myApp category1 subcommand1`
+	 * - `myApp category1 --help`
+	 * - `myApp help category1`
+	 * - `myApp category1 help subcommand2`
+	 */
+	category(name:string, description:string, callback:(app:Omit<Application, "onlyCommand" | "run">) => unknown){
+		const category = new Application(`${this.name} ${name}`, description);
+		this.command(name).description(description).args({
+			unexpectedNamedArgCheck: "ignore",
+			positionalArgCountCheck: "ignore",
+			allowHelpNamedArg: false,
+		}).impl((opts, app) => {
+			return category.run(opts.nodeArgs.concat(opts.unparsedArgs), this.currentRunOptions!);
+		});
+		this.commands[name]!.subcategoryApp = category;
+		callback(category);
+		return this;
+	}
 	/** Creates an alias for a subcommand. */
 	alias(alias:string, target:string){
 		this.aliases[alias] = target;
@@ -312,6 +350,15 @@ export class Application {
 			const commandName = this.commands[firstPositionalArg] ? firstPositionalArg : this.aliases[firstPositionalArg] ?? firstPositionalArg;
 			const command = this.commands[commandName];
 			if(command){
+				if(command.subcategoryApp){
+					return command.subcategoryApp.runHelpCommand({
+						commandName: "help",
+						namedArgs: opts.namedArgs,
+						nodeArgs: opts.nodeArgs,
+						unparsedArgs: opts.unparsedArgs,
+						positionalArgs: opts.positionalArgs.slice(1),
+					});
+				}
 				const aliases = Object.entries(this.aliases).filter(([alias, name]) => name == commandName).map(([alias, name]) => alias);
 				const positionalArgsFragment =
 					command.argOptions.positionalArgs.map(opt =>
@@ -454,15 +501,17 @@ Usage: ${this.name} [command] [options]
 	 * @param args Pass process.argv without modifying it.
 	 * @param options Used for testing.
 	 */
-	public async run(rawArgs:readonly string[], {
-		exitProcessOnHandlerReturn = true,
-		throwOnError = false,
-	}:ApplicationRunOptions = {}):Promise<void> {
+	public async run(rawArgs:readonly string[], runOptions:ApplicationRunOptions = {}):Promise<void> {
 		//This function does as little work as possible, and calls Subcommand.run()
-
+		
 		if(rawArgs.length < 2) crash(`Application.run() received invalid argv: process.argv should include with "node path/to/filename.js" followed`);
 		const nodeArgs = rawArgs.slice(0, 2) as [string, string];
+		const {
+			exitProcessOnHandlerReturn = true,
+			throwOnError = false,
+		} = runOptions;
 
+		this.currentRunOptions = runOptions;
 		this.sourceDirectory = path.join(fs.realpathSync(rawArgs[1]!), "..");
 
 		//We need to do some argument parsing to determine which subcommand to run
@@ -517,12 +566,16 @@ export class Subcommand {
 	 * Information describing the command-line options that this subcommand accepts.
 	 */
 	argOptions:Required<ArgOptions<Record<string, NamedArgData>>>;
+	/**
+	 * Set to an {@link Application} if this subcommand is a category.
+	 */
+	subcategoryApp: Application | null = null;
 	constructor(
 		public name:string,
 		public handler:CommandHandler<any>,
 		public description:string | undefined,
 		argOptions:ArgOptions<Record<string, NamedArgData>> = {namedArgs: {}, positionalArgs: []},
-		public defaultCommand = false
+		public defaultCommand = false,
 	){
 		//Fill in the provided arg options
 		this.argOptions = {

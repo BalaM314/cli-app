@@ -10,7 +10,7 @@ export declare class StringBuilder {
     addWord(message: string): StringBuilder;
     addWord(condition: boolean, message: string): StringBuilder;
     addLine(): StringBuilder;
-    addLine(message: string): StringBuilder;
+    addLine(message: string | undefined): StringBuilder;
     addLine(condition: boolean, message: string): StringBuilder;
     text(): string;
 }

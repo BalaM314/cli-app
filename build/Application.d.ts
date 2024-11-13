@@ -151,12 +151,14 @@ export declare class Application {
     aliases: Record<string, string>;
     /** The directory containing this application's main file. Uses slash or backslash dependent on platform. */
     sourceDirectory: string;
+    private currentRunOptions;
     constructor(
     /** The name used to run this application. Will be used in error suggestions. */
     name: string, description: string);
     /**
      * Adds a subcommand to this application.
      * Uses the builder pattern.
+     *
      * Example usage:
      * ```
      * myApp.command("subcommand1")
@@ -187,6 +189,29 @@ export declare class Application {
     onlyCommand(): Omit<Omit<CommandBuilder, "description"> & {
         _description: string;
     }, "default">;
+    /**
+     * Creates a new category of commands, which can be invoked by passing the category name before the command name.
+     *
+     * Example usage:
+     * ```
+     * myApp.category("category1", "For category1 related commands.", cat => {
+     * 	cat.command("subcommand1")
+     * 		.description("Does subcommand1 things.")
+     * 		.args({})
+     * 		.impl(() => {});
+     * 	cat.command("subcommand2")
+     * 		.description("Does subcommand2 things.")
+     * 		.args({})
+     * 		.impl(() => {});
+     * });
+     * ```
+     * At the command line:
+     * - `myApp category1 subcommand1`
+     * - `myApp category1 --help`
+     * - `myApp help category1`
+     * - `myApp category1 help subcommand2`
+     */
+    category(name: string, description: string, callback: (app: Omit<Application, "onlyCommand" | "run">) => unknown): this;
     /** Creates an alias for a subcommand. */
     alias(alias: string, target: string): this;
     getOnlyCommand(): string | undefined;
@@ -208,7 +233,7 @@ export declare class Application {
      * @param args Pass process.argv without modifying it.
      * @param options Used for testing.
      */
-    run(rawArgs: readonly string[], { exitProcessOnHandlerReturn, throwOnError, }?: ApplicationRunOptions): Promise<void>;
+    run(rawArgs: readonly string[], runOptions?: ApplicationRunOptions): Promise<void>;
 }
 /**
  * Represents one subcommand of an application or script.
@@ -222,6 +247,10 @@ export declare class Subcommand {
      * Information describing the command-line options that this subcommand accepts.
      */
     argOptions: Required<ArgOptions<Record<string, NamedArgData>>>;
+    /**
+     * Set to an {@link Application} if this subcommand is a category.
+     */
+    subcategoryApp: Application | null;
     constructor(name: string, handler: CommandHandler<any>, description: string | undefined, argOptions?: ArgOptions<Record<string, NamedArgData>>, defaultCommand?: boolean);
     /** Runs this subcommand. Do not call directly, call the application's run method instead. */
     run(args: readonly string[], nodeArgs: [string, string], application: Application): number | void | Promise<number | void>;

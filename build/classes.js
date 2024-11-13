@@ -43,7 +43,7 @@ export class StringBuilder {
         if (arg1 == undefined) {
             this.buffer += "\n";
         }
-        else if (typeof arg1 == "string") {
+        else if (typeof arg1 == "string" && arg1.trim().length > 0) {
             this.buffer += arg1;
             this.buffer += "\n";
         }

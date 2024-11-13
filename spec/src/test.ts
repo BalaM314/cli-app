@@ -67,5 +67,23 @@ myApp.command("dashdash").description("tests '--'").args({
 	console.log(opts.positionalArgs);
 });
 
+
+myApp.category("subcategory1", "Description for subcategory 1", category => {
+	category.command("doStuff").description("does stuff").args({
+		namedArgs: {
+			sus: arg().valueless(),
+			option: arg().optional(),
+		}
+	}).impl((opts) => {
+		if(opts.namedArgs["sus"]){
+			process.stdout.write("sussy ");
+		}
+		if(opts.namedArgs["option"]){
+			console.log(`Option: "${opts.namedArgs["option"]}"`);
+		}
+		console.log("test command");
+	});
+});
+
 void myApp.run(process.argv);
 
