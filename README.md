@@ -1,9 +1,44 @@
 # cli-app
 A Node.JS framework for creating CLI applications.
 
-Example code:
 ```ts
-const app = new Application("TODO...");
+const myApp = new Application("my-app", "Does my-app things.");
+myApp.command("version").args({}).impl(() => {
+	console.log("my-app version 1.0.0");
+});
+myApp.command("hello-world")
+	.description("does stuff")
+	.aliases("hw")
+	.args({
+		namedArgs: {
+			"extra-message": arg().optional()
+			"capitalize": arg().valueless().aliases("c")
+				.description("If provided, the output will be in all CAPS.")
+		}
+	}).impl((opts) => {
+		if(opts.namedArgs["extra-message"] != null){
+			//                ^? (property) "extra-message" string | null | undefined
+			console.log(opts.namedArgs["extra-message"]);
+		}
+		let message = "Hello, world!";
+		if(opts.namedArgs.capitalize){
+			//              ^? (property) capitalize: boolean
+			message = message.toUpperCase();
+		}
+		console.log(message);
+	});
+myApp.command("count-lines")
+	.description("Reads every file in the specified directory and outputs the total line count.")
+	.aliases("cl", "lines")
+	.args({
+		positionalArgs: [{
+			name: "directory",
+			default: process.cwd()
+		}]
+	})
+	.impl(async (opts) => {
+		const files = await fs.readdirSync("").catch(TODO)
+	})
 ```
 
 `Script` allows you to easily create single-command apps:
