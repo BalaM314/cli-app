@@ -10,7 +10,7 @@ Contains the code for the Application class, which represents a command-line app
 import path from "node:path";
 import fs from "node:fs";
 import { ApplicationError, StringBuilder } from "./classes.js";
-import { crash, invalidConfig } from "./funcs.js";
+import { crash, fail, invalidConfig } from "./funcs.js";
 /** Helper function to define a named argument. Uses the builder pattern. */
 export const arg = (() => {
     const ArgBuilderPrototype = {
@@ -230,13 +230,9 @@ Usage: ${this.name} [command] [options]
         const _name = /^-(\w+)/;
         const namedArgs = {};
         const positionalArgs = [];
-        let i = 0;
         const args = providedArgs.slice();
         let firstPositionalArg = undefined;
-        while (true) {
-            i++;
-            if (i > 1000)
-                throw new ApplicationError("Too many arguments!");
+        for (let i = 0;; i++) {
             const arg = args.shift(); //Grab the first arg
             if (arg == undefined)
                 break; //If it doesn't exist, return
@@ -419,7 +415,7 @@ export class Subcommand {
             //Count check
             const message = `this command expects at most ${this.argOptions.positionalArgs.length} positional arguments, but ${positionalArgs.length} arguments were passed`;
             if (this.argOptions.positionalArgCountCheck == "error")
-                throw new ApplicationError(message + `\n` + usageInstructionsMessage);
+                fail(message + `\n` + usageInstructionsMessage);
             else if (this.argOptions.positionalArgCountCheck == "warn")
                 console.warn(`Warning: ` + message);
         }
@@ -430,7 +426,7 @@ export class Subcommand {
                 else if (arg.optional)
                     positionalArgs[i] = undefined;
                 else
-                    throw new ApplicationError(`Missing required positional argument "${arg.name}"
+                    fail(`Missing required positional argument "${arg.name}"
 this command expects at least ${this.argOptions.positionalArgs.filter(o => !o.optional).length} positional arguments, but ${positionalArgs.length} arguments were passed
 ${usageInstructionsMessage}`);
             }
@@ -452,7 +448,7 @@ ${usageInstructionsMessage}`);
                     if (this.argOptions.unexpectedNamedArgCheck == "warn")
                         console.warn(message);
                     else if (this.argOptions.unexpectedNamedArgCheck == "error")
-                        throw new ApplicationError(message + "\n" + usageInstructionsMessage);
+                        fail(message + "\n" + usageInstructionsMessage);
                 }
             });
         }
@@ -467,7 +463,7 @@ ${usageInstructionsMessage}`);
                     }
                 }
                 else
-                    throw new ApplicationError(
+                    fail(
                     //If it's required, fail with an error
                     `No value specified for required named argument "${name}".
 To specify it, run the command with --${name}${opt._valueless ? "" : " <value>"}

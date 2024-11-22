@@ -12,20 +12,22 @@ import path from "node:path";
 import fs, { openSync } from "node:fs";
 import { ApplicationError, StringBuilder } from "./classes.js";
 import type { Expand, OmitFunctionProperties, PickFunctionProperties } from "./types.js";
-import { crash, invalidConfig } from "./funcs.js";
+import { crash, fail, invalidConfig } from "./funcs.js";
 
 /** Extra options to customize the behavior of {@link Application.run}. */
 export type ApplicationRunOptions = {
 	/**
 	 * If the command handler throws an ApplicationError, normally, this function will catch it and print an error message.
 	 * If this option is set, the error will be immediately rethrown. Useful for writing tests.
-	 * @default false
+	 * 
+	 * Default: `false`.
 	 */
 	readonly throwOnError?: boolean;
 	/**
 	 * If this option is set, {@link process.exit()} will be called when the command handler returns a numeric exit code.
 	 * Otherwise, this function will throw an error if the exit code is non-zero.
-	 * @default true
+	 * 
+	 * Default: `true`.
 	 */
 	readonly exitProcessOnHandlerReturn?: boolean;
 };
@@ -54,17 +56,20 @@ export type ArgOptions<TNamedArgs extends Record<string, NamedArgData> = Record<
 	readonly positionalArgs?: PositionalArgOptions[];
 	/**
 	 * Specifies the behavior if there are more positional args than the command is supposed to accept.
-	 * @default "ignore".
+	 * 
+	 * Default: `"ignore"`.
 	 */
 	readonly positionalArgCountCheck?: "error" | "warn" | "ignore";
 	/**
 	 * Specifies the behavior if there is a named arg that the command does not accept.
-	 * @default "error".
+	 * 
+	 * Default: `"error"`.
 	 */
 	readonly unexpectedNamedArgCheck?: "error" | "warn" | "ignore";
 	/**
-	 * Whether to convert `app commandName --help` to `app help commandName`.
-	 * @default true
+	 * Whether to interpret `app commandName --help` as `app help commandName`.
+	 * 
+	 * Default: `true`.
 	 */
 	readonly allowHelpNamedArg?: boolean;
 };
@@ -438,12 +443,9 @@ Usage: ${this.name} [command] [options]
 
 		const namedArgs: Record<string, string | null> = {};
 		const positionalArgs:string[] = [];
-		let i = 0;
 		const args = providedArgs.slice();
 		let firstPositionalArg: string | undefined = undefined;
-		while(true){
-			i++;
-			if(i > 1000) throw new ApplicationError("Too many arguments!");
+		for(let i = 0;; i ++){
 
 			const arg = args.shift(); //Grab the first arg
 			if(arg == undefined) break; //If it doesn't exist, return
@@ -637,14 +639,14 @@ export class Subcommand {
 		if(positionalArgs.length > this.argOptions.positionalArgs.length){
 			//Count check
 			const message = `this command expects at most ${this.argOptions.positionalArgs.length} positional arguments, but ${positionalArgs.length} arguments were passed`;
-			if(this.argOptions.positionalArgCountCheck == "error") throw new ApplicationError(message + `\n` + usageInstructionsMessage);
+			if(this.argOptions.positionalArgCountCheck == "error") fail(message + `\n` + usageInstructionsMessage);
 			else if(this.argOptions.positionalArgCountCheck == "warn") console.warn(`Warning: ` + message);
 		}
 		for(const [i, arg] of this.argOptions.positionalArgs.entries()){
 			if(i >= positionalArgs.length){
 				if(arg.default != null) positionalArgs[i] = arg.default;
 				else if(arg.optional) positionalArgs[i] = undefined;
-				else throw new ApplicationError(
+				else fail(
 `Missing required positional argument "${arg.name}"
 this command expects at least ${this.argOptions.positionalArgs.filter(o => !o.optional).length} positional arguments, but ${positionalArgs.length} arguments were passed
 ${usageInstructionsMessage}`
@@ -667,7 +669,7 @@ ${usageInstructionsMessage}`
 				if(!(name in this.argOptions.namedArgs || name in this.argOptions.aliases || name == "help" || name == "?")){
 					const message = `Unexpected argument --${name}${value === null ? "" : `=${value}`}`;
 					if(this.argOptions.unexpectedNamedArgCheck == "warn") console.warn(message);
-					else if(this.argOptions.unexpectedNamedArgCheck == "error") throw new ApplicationError(message + "\n" + usageInstructionsMessage);
+					else if(this.argOptions.unexpectedNamedArgCheck == "error") fail(message + "\n" + usageInstructionsMessage);
 				}
 			});
 		}
@@ -679,7 +681,7 @@ ${usageInstructionsMessage}`
 					if(!opt._valueless){
 						namedArgs[name] = name in namedArgs ? null : undefined;
 					}
-				} else throw new ApplicationError(
+				} else fail(
 					//If it's required, fail with an error
 `No value specified for required named argument "${name}".
 To specify it, run the command with --${name}${opt._valueless ? "" : " <value>"}

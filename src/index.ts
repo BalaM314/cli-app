@@ -10,4 +10,5 @@ You should have received a copy of the GNU Lesser General Public License along w
 export * from "./types.js";
 export * from "./classes.js";
 export * from "./Application.js";
+export { fail } from "./funcs.js";
 // export * from "./Script.js";

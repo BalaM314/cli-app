@@ -4,13 +4,15 @@ export type ApplicationRunOptions = {
     /**
      * If the command handler throws an ApplicationError, normally, this function will catch it and print an error message.
      * If this option is set, the error will be immediately rethrown. Useful for writing tests.
-     * @default false
+     *
+     * Default: `false`.
      */
     readonly throwOnError?: boolean;
     /**
      * If this option is set, {@link process.exit()} will be called when the command handler returns a numeric exit code.
      * Otherwise, this function will throw an error if the exit code is non-zero.
-     * @default true
+     *
+     * Default: `true`.
      */
     readonly exitProcessOnHandlerReturn?: boolean;
 };
@@ -37,17 +39,20 @@ export type ArgOptions<TNamedArgs extends Record<string, NamedArgData> = Record<
     readonly positionalArgs?: PositionalArgOptions[];
     /**
      * Specifies the behavior if there are more positional args than the command is supposed to accept.
-     * @default "ignore".
+     *
+     * Default: `"ignore"`.
      */
     readonly positionalArgCountCheck?: "error" | "warn" | "ignore";
     /**
      * Specifies the behavior if there is a named arg that the command does not accept.
-     * @default "error".
+     *
+     * Default: `"error"`.
      */
     readonly unexpectedNamedArgCheck?: "error" | "warn" | "ignore";
     /**
-     * Whether to convert `app commandName --help` to `app help commandName`.
-     * @default true
+     * Whether to interpret `app commandName --help` as `app help commandName`.
+     *
+     * Default: `true`.
      */
     readonly allowHelpNamedArg?: boolean;
 };
