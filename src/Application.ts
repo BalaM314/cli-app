@@ -35,7 +35,7 @@ export type ApplicationRunOptions = {
 /** Passed while defining a command. */
 export type PositionalArgOptions = {
 	readonly name: string;
-	readonly description: string;
+	readonly description?: string;
 	/**
 	 * Whether the argument does not need to be specified by the command invoker. Default: false.
 	 * If true, the command will be called with `undefined` for the value of this argument if it was omitted.
@@ -210,7 +210,7 @@ export const arg:() => NamedArgBuilderInitial = (() => {
  */
 export class Application {
 	/** Stores all subcommands. */
-	commands: Record<string, Subcommand | undefined> = {};
+	commands: Record<string, Subcommand> = {};
 	/** Stores all command aliases. */
 	aliases: Record<string, string> = {};
 	/** The directory containing this application's main file. Uses slash or backslash dependent on platform. */
@@ -301,7 +301,7 @@ export class Application {
 	 */
 	onlyCommand(){
 		if(Object.keys(this.commands).length > 1) invalidConfig(`onlyCommand() is not valid here: there are already other commands defined`);
-		return this.command(this.name, this.description).default();
+		return this.command(this.name, this.description).default().aliases();
 	}
 	/**
 	 * Creates a new category of commands, which can be invoked by passing the category name before the command name.
@@ -389,7 +389,7 @@ export class Application {
 				if(Object.entries(command.argOptions.namedArgs).length != 0){
 					Object.entries(command.argOptions.namedArgs)
 						.map(([name, opt]) =>
-							`<${name}>: ${opt._description}`
+							opt._description ? `<${name}>: ${opt._description}` : `<${name}>`
 						).forEach(line => outputText.addLine(line));
 					outputText.addLine();
 				}
@@ -397,7 +397,7 @@ export class Application {
 				if(command.argOptions.positionalArgs.length != 0){
 					command.argOptions.positionalArgs
 						.map((opt) =>
-							`<${opt.name}>: ${opt.description}`
+							opt.description ? `<${opt.name}>: ${opt.description}` : `<${opt.name}>`
 						).forEach(line => outputText.addLine(line));
 					outputText.addLine();
 				}
@@ -416,7 +416,7 @@ Usage: ${this.name} [subcommand] [options]
 `
 			);
 			for(const command of Object.values(this.commands)){
-				console.log(`\t${command?.name}: ${command?.description ?? "No description provided."}`);
+				console.log(`\t${command.name}: ${command.description ?? "No description provided."}`);
 			}
 			for(const [alias, name] of Object.entries(this.aliases)){
 				console.log(`\t${alias}: alias for ${name}`);
@@ -668,7 +668,7 @@ ${usageInstructionsMessage}`
 				//excess check
 				//If the arg is not in the named arguments or the aliases
 				if(!(name in this.argOptions.namedArgs || name in this.argOptions.aliases || name == "help" || name == "?")){
-					const message = `Unexpected argument --${name}${value === null ? "" : `=${value}`}`;
+					const message = `Unexpected argument --${name}${value === null ? "" : `=${value!}`}`;
 					if(this.argOptions.unexpectedNamedArgCheck == "warn") console.warn(message);
 					else if(this.argOptions.unexpectedNamedArgCheck == "error") fail(message + "\n" + usageInstructionsMessage);
 				}

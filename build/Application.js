@@ -107,7 +107,7 @@ export class Application {
     onlyCommand() {
         if (Object.keys(this.commands).length > 1)
             invalidConfig(`onlyCommand() is not valid here: there are already other commands defined`);
-        return this.command(this.name, this.description).default();
+        return this.command(this.name, this.description).default().aliases();
     }
     /**
      * Creates a new category of commands, which can be invoked by passing the category name before the command name.
@@ -189,12 +189,12 @@ export class Application {
                     .addLine();
                 if (Object.entries(command.argOptions.namedArgs).length != 0) {
                     Object.entries(command.argOptions.namedArgs)
-                        .map(([name, opt]) => `<${name}>: ${opt._description}`).forEach(line => outputText.addLine(line));
+                        .map(([name, opt]) => opt._description ? `<${name}>: ${opt._description}` : `<${name}>`).forEach(line => outputText.addLine(line));
                     outputText.addLine();
                 }
                 if (command.argOptions.positionalArgs.length != 0) {
                     command.argOptions.positionalArgs
-                        .map((opt) => `<${opt.name}>: ${opt.description}`).forEach(line => outputText.addLine(line));
+                        .map((opt) => opt.description ? `<${opt.name}>: ${opt.description}` : `<${opt.name}>`).forEach(line => outputText.addLine(line));
                     outputText.addLine();
                 }
                 outputText.addLine(aliases.length != 0, `Aliases: ${aliases.join(", ")}`);
@@ -211,7 +211,7 @@ Usage: ${this.name} [subcommand] [options]
 	List of all subcommands:
 `);
             for (const command of Object.values(this.commands)) {
-                console.log(`\t${command?.name}: ${command?.description ?? "No description provided."}`);
+                console.log(`\t${command.name}: ${command.description ?? "No description provided."}`);
             }
             for (const [alias, name] of Object.entries(this.aliases)) {
                 console.log(`\t${alias}: alias for ${name}`);

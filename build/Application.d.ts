@@ -19,7 +19,7 @@ export type ApplicationRunOptions = {
 /** Passed while defining a command. */
 export type PositionalArgOptions = {
     readonly name: string;
-    readonly description: string;
+    readonly description?: string;
     /**
      * Whether the argument does not need to be specified by the command invoker. Default: false.
      * If true, the command will be called with `undefined` for the value of this argument if it was omitted.
@@ -151,7 +151,7 @@ export declare class Application {
     name: string;
     description: string;
     /** Stores all subcommands. */
-    commands: Record<string, Subcommand | undefined>;
+    commands: Record<string, Subcommand>;
     /** Stores all command aliases. */
     aliases: Record<string, string>;
     /** The directory containing this application's main file. Uses slash or backslash dependent on platform. */
@@ -191,9 +191,9 @@ export declare class Application {
     /**
      * Same as {@link command()}, but for applications with only one subcommand. This will slightly change the display of help messages.
      */
-    onlyCommand(): Omit<Omit<CommandBuilder, "description"> & {
+    onlyCommand(): Omit<Omit<Omit<CommandBuilder, "description"> & {
         _description: string;
-    }, "default">;
+    }, "default">, "aliases">;
     /**
      * Creates a new category of commands, which can be invoked by passing the category name before the command name.
      *
