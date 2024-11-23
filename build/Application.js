@@ -24,6 +24,7 @@ export const arg = (() => {
             return { ...this, _optional: false, __proto__: ArgBuilderPrototype };
         },
         valueless() {
+            //Assertion: the required() function is still on the prototype chain
             return { ...this, _valueless: true, _optional: true, __proto__: ArgBuilderPrototype };
         },
         default(value) {
@@ -42,6 +43,8 @@ export const arg = (() => {
         _aliases: [],
     });
 })();
+//#endregion
+//#region Main logic
 /**
  * Represents an entire application, with multiple subcommands and various functionality.
  */
@@ -232,7 +235,7 @@ Usage: ${this.name} [subcommand] [options]
      * @returns Formatted args.
      */
     static parseArgs(providedArgs, valuelessOptions = []) {
-        const __nameEqualsValue = /^--([\s\S]+?)=([\s\S]+?)$/;
+        const __nameEqualsValue = /^--([\s\S]+?)=([\s\S]*?)$/;
         const __name = /^--([\s\S]+)/;
         const _name = /^-(\w+)/;
         const namedArgs = {};
@@ -491,3 +494,4 @@ ${usageInstructionsMessage}`);
         }, application);
     }
 }
+//#endregion

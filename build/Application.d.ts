@@ -115,29 +115,57 @@ type NamedArgData = {
 };
 /** Contains functions that use the builder pattern to produce a {@link NamedArgData}. */
 type NamedArgBuilder = NamedArgData & {
+    /** Sets the description for this named argument. Used in help messages. */
     description<T extends Partial<NamedArgBuilder>, const V extends string>(this: T, description: V): Omit<T, "description"> & {
         _description: V;
     };
+    /**
+     * Marks this named argument as optional.
+     * Named arguments are required by default.
+     *
+     * The value provided to the command handler will be a string if one was passed, `undefined` if it was omitted, and `null` if the argument was specified without a value.
+     */
     optional<T extends Partial<NamedArgBuilder>>(this: T): Omit<T, "optional" | "required" | "default" | "_optional" | "valueless"> & {
         _optional: true;
     };
-    required<T extends Partial<NamedArgBuilder>>(this: T): Omit<T, "optional" | "required" | "default" | "_optional" | "valueless"> & {
+    /**
+     * Marks this valueless named argument as required.
+     * This will force the user to pass this named argument. Useful for confirmations, like "--potentially-destructive-action".
+     *
+     * The value provided to the command handler will be of type `true` and can be ignored.
+     */
+    required<T extends Partial<NamedArgBuilder> & {
+        _valueless: true;
+    }>(this: T): Omit<T, "optional" | "required" | "default" | "_optional" | "valueless"> & {
         _optional: false;
     };
-    valueless<T extends Partial<NamedArgBuilder>>(this: T): Omit<T, "valueless" | "_valueless" | "_optional"> & {
+    /**
+     * Marks this named argument as valueless.
+     * For example: the "verbose" option doesn't accept a value, so the command `app --verbose value1` can be parsed as `app value1 --verbose`, not `app --verbose=value1`.
+     * The provided to the handler will be `true` if this argument was specified, and `false` otherwise.
+     */
+    valueless<T extends Partial<NamedArgBuilder>>(this: T): Omit<T, "valueless" | "optional" | "_valueless" | "_optional" | "default"> & {
         _valueless: true;
         _optional: true;
-    };
-    default<T extends Partial<NamedArgBuilder>, const V extends string>(this: T, value: V): Omit<T, "default" | "_default" | "_optional" | "optional" | "required"> & {
+    } & Pick<NamedArgBuilder, "required">;
+    /**
+     * Specifies a default value for this named argument. If the user does not specify a value for this named argument, the default value will be used.
+     *
+     * Also marks this argument as optional.
+     */
+    default<T extends Partial<NamedArgBuilder>, const V extends string>(this: T, value: V): Omit<T, "default" | "_default" | "_optional" | "optional" | "required" | "valueless"> & {
         _default: V;
         _optional: true;
     };
+    /**
+     * Specifies aliases for this named argument. Providing one single-character alias is recommended.
+     */
     aliases<T extends Partial<NamedArgBuilder>>(this: T, ...aliases: string[]): Omit<T, "aliases" | "_aliases"> & {
         _aliases: string[];
     };
 };
 /** The initial state of the named argument builder, with defaults. */
-type NamedArgBuilderInitial = NamedArgBuilder & {
+type NamedArgBuilderInitial = Omit<NamedArgBuilder, "required"> & {
     readonly _optional: false;
     readonly _valueless: false;
 };
