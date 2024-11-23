@@ -15,32 +15,32 @@ import { crash, fail, invalidConfig } from "./funcs.js";
 export const arg = (() => {
     const ArgBuilderPrototype = {
         description(description) {
-            return { ...this, _description: description, __proto__: ArgBuilderPrototype };
+            return { ...this, "~description": description, __proto__: ArgBuilderPrototype };
         },
         optional() {
-            return { ...this, _optional: true, __proto__: ArgBuilderPrototype };
+            return { ...this, "~optional": true, __proto__: ArgBuilderPrototype };
         },
         required() {
-            return { ...this, _optional: false, __proto__: ArgBuilderPrototype };
+            return { ...this, "~optional": false, __proto__: ArgBuilderPrototype };
         },
         valueless() {
             //Assertion: the required() function is still on the prototype chain
-            return { ...this, _valueless: true, _optional: true, __proto__: ArgBuilderPrototype };
+            return { ...this, "~valueless": true, "~optional": true, __proto__: ArgBuilderPrototype };
         },
         default(value) {
-            return { ...this, _default: value, _optional: true, __proto__: ArgBuilderPrototype };
+            return { ...this, "~default": value, "~optional": true, __proto__: ArgBuilderPrototype };
         },
         aliases(...aliases) {
-            return { ...this, _aliases: aliases, __proto__: ArgBuilderPrototype };
+            return { ...this, "~aliases": aliases, __proto__: ArgBuilderPrototype };
         },
     };
     return () => ({
         __proto__: ArgBuilderPrototype,
-        _default: undefined,
-        _description: undefined,
-        _optional: false,
-        _valueless: false,
-        _aliases: [],
+        "~default": undefined,
+        "~description": undefined,
+        "~optional": false,
+        "~valueless": false,
+        "~aliases": [],
     });
 })();
 //#endregion
@@ -79,13 +79,13 @@ export class Application {
         const app = this;
         const CommandBuilderPrototype = {
             description(description) {
-                return { ...this, _description: description, __proto__: CommandBuilderPrototype };
+                return { ...this, "~description": description, __proto__: CommandBuilderPrototype };
             },
             aliases(...aliases) {
-                return { ...this, _aliases: aliases, __proto__: CommandBuilderPrototype };
+                return { ...this, "~aliases": aliases, __proto__: CommandBuilderPrototype };
             },
             default() {
-                return { ...this, _default: true, __proto__: CommandBuilderPrototype };
+                return { ...this, "~default": true, __proto__: CommandBuilderPrototype };
             },
             args(argOptions) {
                 return {
@@ -93,21 +93,21 @@ export class Application {
                     impl(impl) {
                         if (app.commands[name])
                             invalidConfig(`Cannot register a subcommand with name "${name}" because there is already a subcommand with that name`);
-                        const subcommand = new Subcommand(this._name, impl, this._description, argOptions, this._default);
+                        const subcommand = new Subcommand(this["~name"], impl, this["~description"], argOptions, this["~default"]);
                         app.commands[name] = subcommand;
-                        if (this._default)
+                        if (this["~default"])
                             app.defaultSubcommand = subcommand;
-                        this._aliases.forEach(alias => app.aliases[alias] = name);
+                        this["~aliases"].forEach(alias => app.aliases[alias] = name);
                     }
                 };
             },
         };
         const builder = {
             __proto__: CommandBuilderPrototype,
-            _name: name,
-            _default: false,
-            _description: description,
-            _aliases: [],
+            "~name": name,
+            "~default": false,
+            "~description": description,
+            "~aliases": [],
         };
         return builder;
     }
@@ -185,9 +185,9 @@ export class Application {
                 const aliases = Object.entries(this.aliases).filter(([alias, name]) => name == commandName).map(([alias, name]) => alias);
                 const positionalArgsFragment = command.argOptions.positionalArgs.map(opt => opt.optional ? `[<${opt.name}>]` : `<${opt.name}>`).join(" ");
                 const namedArgsFragment = Object.entries(command.argOptions.namedArgs)
-                    .map(([name, opt]) => opt._optional ?
-                    `[--${name}${opt._valueless ? `` : ` <${name}>`}]`
-                    : `--${name}${opt._valueless ? `` : ` <${name}>`}`).join(" ");
+                    .map(([name, opt]) => opt["~optional"] ?
+                    `[--${name}${opt["~valueless"] ? `` : ` <${name}>`}]`
+                    : `--${name}${opt["~valueless"] ? `` : ` <${name}>`}`).join(" ");
                 const outputText = new StringBuilder()
                     .addLine()
                     .addLine(`Help for subcommand ${command.name}:`)
@@ -199,7 +199,7 @@ export class Application {
                     .addLine();
                 if (Object.entries(command.argOptions.namedArgs).length != 0) {
                     Object.entries(command.argOptions.namedArgs)
-                        .map(([name, opt]) => opt._description ? `<${name}>: ${opt._description}` : `<${name}>`).forEach(line => outputText.addLine(line));
+                        .map(([name, opt]) => opt["~description"] ? `<${name}>: ${opt["~description"]}` : `<${name}>`).forEach(line => outputText.addLine(line));
                     outputText.addLine();
                 }
                 if (command.argOptions.positionalArgs.length != 0) {
@@ -380,15 +380,15 @@ export class Subcommand {
         //Fill in the provided arg options
         this.argOptions = {
             namedArgs: Object.fromEntries(Object.entries(argOptions.namedArgs ?? {}).map(([key, value]) => [key, {
-                    _description: value._description ?? "No description provided",
-                    _optional: value._optional,
-                    _default: value._default,
-                    _valueless: value._valueless,
-                    _aliases: value._aliases.concat(Object.entries(argOptions.aliases ?? {}).filter(([from, to]) => from == key).map(([from, to]) => to)),
+                    "~description": value["~description"] ?? "No description provided",
+                    "~optional": value["~optional"],
+                    "~default": value["~default"],
+                    "~valueless": value["~valueless"],
+                    "~aliases": value["~aliases"].concat(Object.entries(argOptions.aliases ?? {}).filter(([from, to]) => from == key).map(([from, to]) => to)),
                 }])),
             aliases: Object.fromEntries([
                 ...Object.entries(argOptions.aliases ?? []),
-                ...Object.entries(argOptions.namedArgs ?? {}).map(([name, opts]) => opts._aliases?.map(alias => [alias, name]) ?? []).flat(),
+                ...Object.entries(argOptions.namedArgs ?? {}).map(([name, opts]) => opts["~aliases"]?.map(alias => [alias, name]) ?? []).flat(),
             ]),
             positionalArgs: (argOptions.positionalArgs ?? []).map((a, i) => ({
                 ...a,
@@ -418,8 +418,8 @@ export class Subcommand {
             `for usage instructions, run ${application.name} --help`
             : `for usage instructions, run ${application.name} help ${this.name}`;
         const valuelessOptions = Object.entries(this.argOptions.namedArgs)
-            .filter(([k, v]) => v._valueless)
-            .map(([k, v]) => v._aliases.concat(k)).flat();
+            .filter(([k, v]) => v["~valueless"])
+            .map(([k, v]) => v["~aliases"].concat(k)).flat();
         const { namedArgs, positionalArgs } = Application.parseArgs(args, valuelessOptions);
         //Handle positional args
         if (positionalArgs.length > this.argOptions.positionalArgs.length) {
@@ -465,11 +465,11 @@ ${usageInstructionsMessage}`);
         }
         Object.entries(this.argOptions.namedArgs).forEach(([name, opt]) => {
             if (namedArgs[name] == null) { //If the named arg was not specified or was left blank
-                if (opt._default != null) { //If it has a default value, set it to that
-                    namedArgs[name] = opt._default;
+                if (opt["~default"] != null) { //If it has a default value, set it to that
+                    namedArgs[name] = opt["~default"];
                 }
-                else if (opt._optional) {
-                    if (!opt._valueless) {
+                else if (opt["~optional"]) {
+                    if (!opt["~valueless"]) {
                         namedArgs[name] = name in namedArgs ? null : undefined;
                     }
                 }
@@ -477,10 +477,10 @@ ${usageInstructionsMessage}`);
                     fail(
                     //If it's required, fail with an error
                     `No value specified for required named argument "${name}".
-To specify it, run the command with --${name}${opt._valueless ? "" : " <value>"}
+To specify it, run the command with --${name}${opt["~valueless"] ? "" : " <value>"}
 ${usageInstructionsMessage}`);
             }
-            if (opt._valueless) {
+            if (opt["~valueless"]) {
                 //Convert valueless named args to booleans
                 namedArgs[name] = (namedArgs[name] === null);
             }

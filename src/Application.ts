@@ -100,9 +100,9 @@ type NamedArgs<NamedArgOpts extends Record<string, NamedArgData>> = {
 };
 
 type NamedArgFrom<NamedArgOpt extends NamedArgData> =
-	NamedArgOpt["_valueless"] extends true ?
-		NamedArgOpt["_optional"] extends false ? true : (false | true)
-	: NamedArgOpt["_optional"] extends true ? NamedArgOpt["_default"] extends string ? string : (string | undefined | null) : string;
+	NamedArgOpt["~valueless"] extends true ?
+		NamedArgOpt["~optional"] extends false ? true : (false | true)
+	: NamedArgOpt["~optional"] extends true ? NamedArgOpt["~default"] extends string ? string : (string | undefined | null) : string;
 
 export type CommandHandler<T extends Record<string, NamedArgData>> = 
 	(opts: Expand<ComputeOptions<T>>, app: Application) => void | number | Promise<void | number>;
@@ -112,16 +112,17 @@ export type CommandHandler<T extends Record<string, NamedArgData>> =
 
 /** The data that gets filled out by the command builder. */
 export type CommandData = {
-	readonly _name: string;
-	readonly _description: string | undefined;
-	readonly _default: boolean;
-	readonly _aliases: string[];
+	//Properties are prefixed with ~ because it is sorted after all alphabetic characters, so the intellisense list suggests functions first.
+	readonly "~name": string;
+	readonly "~description": string | undefined;
+	readonly "~default": boolean;
+	readonly "~aliases": string[];
 };
 /** Contains functions that use the builder pattern to produce a {@link CommandData}. */
 export type CommandBuilder = CommandData & {
 	/** Sets the description for this subcommand. */
 	description<T extends Partial<CommandBuilder>>(this:T, description:string):
-		Omit<T, "description" | "_description"> & { _description: string };
+		Omit<T, "description" | "~description"> & { "~description": string };
 	/** Adds additional names that can be used to run this subcommand. */
 	aliases<T extends Partial<CommandBuilder>>(this:T, ...aliases:string[]):
 		Omit<T, "aliases">;
@@ -143,7 +144,7 @@ export type CommandBuilder = CommandData & {
 };
 /** The initial state of the command builder, with defaults. */
 type CommandBuilderInitial = CommandBuilder & {
-	readonly _default: false;
+	readonly "~default": false;
 };
 
 //#endregion
@@ -151,17 +152,18 @@ type CommandBuilderInitial = CommandBuilder & {
 
 /** The data that gets filled out by the named argument builder. */
 type NamedArgData = {
-	readonly _optional: boolean;
-	readonly _valueless: boolean;
-	readonly _default: string | undefined;
-	readonly _description: string | undefined;
-	readonly _aliases: string[];
+	//Properties are prefixed with ~ because it is sorted after all alphabetic characters, so the intellisense list suggests functions first.
+	readonly "~optional": boolean;
+	readonly "~valueless": boolean;
+	readonly "~default": string | undefined;
+	readonly "~description": string | undefined;
+	readonly "~aliases": string[];
 };
 /** Contains functions that use the builder pattern to produce a {@link NamedArgData}. */
 type NamedArgBuilder = NamedArgData & {
 	/** Sets the description for this named argument. Used in help messages. */
 	description<T extends Partial<NamedArgBuilder>, const V extends string>(this:T, description:V):
-		Omit<T, "description"> & { _description: V; };
+		Omit<T, "description"> & { "~description": V; };
 	/**
 	 * Marks this named argument as optional.
 	 * Named arguments are required by default.
@@ -169,70 +171,70 @@ type NamedArgBuilder = NamedArgData & {
 	 * The value provided to the command handler will be a string if one was passed, `undefined` if it was omitted, and `null` if the argument was specified without a value.
 	 */
 	optional<T extends Partial<NamedArgBuilder>>(this:T):
-		Omit<T, "optional" | "required" | "default" | "_optional" | "valueless"> & { _optional: true; };
+		Omit<T, "optional" | "required" | "default" | "~optional" | "valueless"> & { "~optional": true; };
 	/**
 	 * Marks this valueless named argument as required.
 	 * This will force the user to pass this named argument. Useful for confirmations, like "--potentially-destructive-action".
 	 * 
 	 * The value provided to the command handler will be of type `true` and can be ignored. 
 	 */
-	required<T extends Partial<NamedArgBuilder> & { _valueless: true; }>(this:T):
-		Omit<T, "optional" | "required" | "default" | "_optional" | "valueless"> & { _optional: false; };
+	required<T extends Partial<NamedArgBuilder> & { "~valueless": true; }>(this:T):
+		Omit<T, "optional" | "required" | "default" | "~optional" | "valueless"> & { "~optional": false; };
 	/**
 	 * Marks this named argument as valueless.
 	 * For example: the "verbose" option doesn't accept a value, so the command `app --verbose value1` can be parsed as `app value1 --verbose`, not `app --verbose=value1`.
 	 * The provided to the handler will be `true` if this argument was specified, and `false` otherwise.
 	 */
 	valueless<T extends Partial<NamedArgBuilder>>(this:T):
-		Omit<T, "valueless" | "optional" | "_valueless" | "_optional" | "default"> & { _valueless: true; _optional: true; } & Pick<NamedArgBuilder, "required">;
+		Omit<T, "valueless" | "optional" | "~valueless" | "~optional" | "default"> & { "~valueless": true; "~optional": true; } & Pick<NamedArgBuilder, "required">;
 	/**
 	 * Specifies a default value for this named argument. If the user does not specify a value for this named argument, the default value will be used.
 	 * 
 	 * Also marks this argument as optional.
 	 */
 	default<T extends Partial<NamedArgBuilder>, const V extends string>(this:T, value:V):
-		Omit<T, "default" | "_default" | "_optional" | "optional" | "required" | "valueless"> & { _default: V; _optional: true; };
+		Omit<T, "default" | "~default" | "~optional" | "optional" | "required" | "valueless"> & { "~default": V; "~optional": true; };
 	/**
 	 * Specifies aliases for this named argument. Providing one single-character alias is recommended.
 	 */
 	aliases<T extends Partial<NamedArgBuilder>>(this:T, ...aliases:string[]):
-		Omit<T, "aliases" | "_aliases"> & { _aliases: string[]; };
+		Omit<T, "aliases" | "~aliases"> & { "~aliases": string[]; };
 };
 /** The initial state of the named argument builder, with defaults. */
 type NamedArgBuilderInitial = Omit<NamedArgBuilder, "required"> & {
-	readonly _optional: false;
-	readonly _valueless: false;
+	readonly "~optional": false;
+	readonly "~valueless": false;
 };
 /** Helper function to define a named argument. Uses the builder pattern. */
 export const arg:() => NamedArgBuilderInitial = (() => {
 	const ArgBuilderPrototype: PickFunctionProperties<NamedArgBuilder> = {
 		description(description){
-			return { ...this, _description: description, __proto__: ArgBuilderPrototype };
+			return { ...this, "~description": description, __proto__: ArgBuilderPrototype };
 		},
 		optional(){
-			return { ...this, _optional: true, __proto__: ArgBuilderPrototype };
+			return { ...this, "~optional": true, __proto__: ArgBuilderPrototype };
 		},
 		required(){
-			return { ...this, _optional: false, __proto__: ArgBuilderPrototype };
+			return { ...this, "~optional": false, __proto__: ArgBuilderPrototype };
 		},
 		valueless(){
 			//Assertion: the required() function is still on the prototype chain
-			return { ...this, _valueless: true, _optional: true, __proto__: ArgBuilderPrototype } as never;
+			return { ...this, "~valueless": true, "~optional": true, __proto__: ArgBuilderPrototype } as never;
 		},
 		default(value){
-			return { ...this, _default: value, _optional: true, __proto__: ArgBuilderPrototype };
+			return { ...this, "~default": value, "~optional": true, __proto__: ArgBuilderPrototype };
 		},
 		aliases(...aliases){
-			return { ...this, _aliases: aliases, __proto__: ArgBuilderPrototype };
+			return { ...this, "~aliases": aliases, __proto__: ArgBuilderPrototype };
 		},
 	};
 	return () => ({
 		__proto__: ArgBuilderPrototype,
-		_default: undefined,
-		_description: undefined,
-		_optional: false,
-		_valueless: false,
-		_aliases: [],
+		"~default": undefined,
+		"~description": undefined,
+		"~optional": false,
+		"~valueless": false,
+		"~aliases": [],
 	} satisfies OmitFunctionProperties<NamedArgBuilderInitial> & { __proto__: any; } as never as OmitFunctionProperties<NamedArgBuilderInitial> & typeof ArgBuilderPrototype);
 })();
 //#endregion
@@ -300,38 +302,38 @@ export class Application {
 	 * ```
 	 */
 	command(name:string):CommandBuilder;
-	command(name:string, description:string):Omit<CommandBuilder, "description"> & { _description: string };
+	command(name:string, description:string):Omit<CommandBuilder, "description"> & { "~description": string };
 	command(name:string, description?:string):Omit<CommandBuilder, "description"> {
 		const app = this;
 		const CommandBuilderPrototype: PickFunctionProperties<CommandBuilder> = {
 			description(description){
-				return { ...this, _description: description, __proto__: CommandBuilderPrototype };
+				return { ...this, "~description": description, __proto__: CommandBuilderPrototype };
 			},
 			aliases(...aliases) {
-				return { ...this, _aliases: aliases, __proto__: CommandBuilderPrototype };
+				return { ...this, "~aliases": aliases, __proto__: CommandBuilderPrototype };
 			},
 			default() {
-				return { ...this, _default: true, __proto__: CommandBuilderPrototype };
+				return { ...this, "~default": true, __proto__: CommandBuilderPrototype };
 			},
 			args(argOptions){
 				return {
 					...this,
 					impl(impl){
 						if(app.commands[name]) invalidConfig(`Cannot register a subcommand with name "${name}" because there is already a subcommand with that name`);
-						const subcommand = new Subcommand(this._name, impl, this._description, argOptions, this._default);
+						const subcommand = new Subcommand(this["~name"], impl, this["~description"], argOptions, this["~default"]);
 						app.commands[name] = subcommand;
-						if(this._default) app.defaultSubcommand = subcommand;
-						this._aliases.forEach(alias => app.aliases[alias] = name);
+						if(this["~default"]) app.defaultSubcommand = subcommand;
+						this["~aliases"].forEach(alias => app.aliases[alias] = name);
 					}
 				};
 			},
 		};
 		const builder:CommandBuilder = ({
 			__proto__: CommandBuilderPrototype,
-			_name: name,
-			_default: false,
-			_description: description,
-			_aliases: [],
+			"~name": name,
+			"~default": false,
+			"~description": description,
+			"~aliases": [],
 		} satisfies OmitFunctionProperties<CommandBuilderInitial> & { __proto__: any; } as never as OmitFunctionProperties<CommandBuilderInitial> & typeof CommandBuilderPrototype);
 		return builder;
 	}
@@ -411,9 +413,9 @@ export class Application {
 				const namedArgsFragment =
 					Object.entries(command.argOptions.namedArgs)
 						.map(([name, opt]) =>
-							opt._optional ?
-								`[--${name}${opt._valueless ? `` : ` <${name}>`}]`
-							: `--${name}${opt._valueless ? `` : ` <${name}>`}`
+							opt["~optional"] ?
+								`[--${name}${opt["~valueless"] ? `` : ` <${name}>`}]`
+							: `--${name}${opt["~valueless"] ? `` : ` <${name}>`}`
 						).join(" ");
 				const outputText = new StringBuilder()
 					.addLine()
@@ -428,7 +430,7 @@ export class Application {
 				if(Object.entries(command.argOptions.namedArgs).length != 0){
 					Object.entries(command.argOptions.namedArgs)
 						.map(([name, opt]) =>
-							opt._description ? `<${name}>: ${opt._description}` : `<${name}>`
+							opt["~description"] ? `<${name}>: ${opt["~description"]}` : `<${name}>`
 						).forEach(line => outputText.addLine(line));
 					outputText.addLine();
 				}
@@ -622,16 +624,16 @@ export class Subcommand {
 		//Fill in the provided arg options
 		this.argOptions = {
 			namedArgs: Object.fromEntries(Object.entries(argOptions.namedArgs ?? {}).map<[string, NamedArgData]>(([key, value]) => [key, {
-				_description: value._description ?? "No description provided",
-				_optional: value._optional,
-				_default: value._default,
-				_valueless: value._valueless,
-				_aliases: value._aliases.concat(Object.entries(argOptions.aliases ?? {}).filter(([from, to]) => from == key).map(([from, to]) => to)),
+				"~description": value["~description"] ?? "No description provided",
+				"~optional": value["~optional"],
+				"~default": value["~default"],
+				"~valueless": value["~valueless"],
+				"~aliases": value["~aliases"].concat(Object.entries(argOptions.aliases ?? {}).filter(([from, to]) => from == key).map(([from, to]) => to)),
 			}])),
 			aliases: Object.fromEntries<string>([
 				...Object.entries(argOptions.aliases ?? []),
 				...Object.entries(argOptions.namedArgs ?? {}).map(([name, opts]) =>
-					opts._aliases?.map(alias => [alias, name] as const) ?? []
+					opts["~aliases"]?.map(alias => [alias, name] as const) ?? []
 				).flat(),
 			]),
 			positionalArgs: (argOptions.positionalArgs ?? []).map((a, i) => ({
@@ -667,8 +669,8 @@ export class Subcommand {
 
 
 		const valuelessOptions = Object.entries(this.argOptions.namedArgs)
-			.filter(([k, v]) => v._valueless)
-			.map(([k, v]) => v._aliases.concat(k)).flat();
+			.filter(([k, v]) => v["~valueless"])
+			.map(([k, v]) => v["~aliases"].concat(k)).flat();
 		const { namedArgs, positionalArgs }:{
 			namedArgs: Record<string, string | boolean | undefined | null>;
 			positionalArgs: Array<string | undefined>;
@@ -715,20 +717,20 @@ ${usageInstructionsMessage}`
 		}
 		Object.entries(this.argOptions.namedArgs).forEach(([name, opt]) => {
 			if(namedArgs[name] == null){ //If the named arg was not specified or was left blank
-				if(opt._default != null){ //If it has a default value, set it to that
-					namedArgs[name] = opt._default;
-				} else if(opt._optional) {
-					if(!opt._valueless){
+				if(opt["~default"] != null){ //If it has a default value, set it to that
+					namedArgs[name] = opt["~default"];
+				} else if(opt["~optional"]) {
+					if(!opt["~valueless"]){
 						namedArgs[name] = name in namedArgs ? null : undefined;
 					}
 				} else fail(
 					//If it's required, fail with an error
 `No value specified for required named argument "${name}".
-To specify it, run the command with --${name}${opt._valueless ? "" : " <value>"}
+To specify it, run the command with --${name}${opt["~valueless"] ? "" : " <value>"}
 ${usageInstructionsMessage}`
 				);
 			}
-			if(opt._valueless){
+			if(opt["~valueless"]){
 				//Convert valueless named args to booleans
 				namedArgs[name] = (namedArgs[name] === null);
 			}
