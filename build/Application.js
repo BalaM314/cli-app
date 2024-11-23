@@ -48,7 +48,9 @@ export const arg = (() => {
 export class Application {
     constructor(
     /** The name used to run this application. Will be used in error suggestions. */
-    name, description) {
+    name, 
+    /** A description for this application. Will be used in help messages. */
+    description) {
         this.name = name;
         this.description = description;
         /** Stores all subcommands. */
@@ -56,7 +58,7 @@ export class Application {
         /** Stores all command aliases. */
         this.aliases = {};
         this.currentRunOptions = null;
-        this.commands["help"] = new Subcommand("help", this.runHelpCommand.bind(this), "Displays help information about all subcommands or a specific subcommand.", {
+        const helpCommand = new Subcommand("help", this.runHelpCommand.bind(this), "Displays help information about all subcommands or a specific subcommand.", {
             positionalArgs: [{
                     name: "subcommand",
                     description: "The subcommand to get information about.",
@@ -66,6 +68,8 @@ export class Application {
             positionalArgCountCheck: "ignore",
             unexpectedNamedArgCheck: "warn",
         });
+        this.commands["help"] = helpCommand;
+        this.defaultSubcommand = helpCommand;
         this.sourceDirectory = "null";
     }
     command(name, description) {
@@ -86,7 +90,10 @@ export class Application {
                     impl(impl) {
                         if (app.commands[name])
                             invalidConfig(`Cannot register a subcommand with name "${name}" because there is already a subcommand with that name`);
-                        app.commands[name] = new Subcommand(this._name, impl, this._description, argOptions, this._default);
+                        const subcommand = new Subcommand(this._name, impl, this._description, argOptions, this._default);
+                        app.commands[name] = subcommand;
+                        if (this._default)
+                            app.defaultSubcommand = subcommand;
                         this._aliases.forEach(alias => app.aliases[alias] = name);
                     }
                 };
@@ -312,7 +319,6 @@ Usage: ${this.name} [subcommand] [options]
         const { namedArgs, firstPositionalArg } = Application.parseArgs(args);
         //Set "help" to the default command: if someone runs `command nonexistentsubcommand ...rest`,
         //it will get interpreted as `command help nonexistentsubcommand ...rest`, which will generate the correct error message.
-        const defaultCommand = Object.values(this.commands).find(command => command?.defaultCommand) ?? this.commands["help"]; //TODO compute in .command()
         let [newArgs, command] = (() => {
             if (firstPositionalArg && this.commands[firstPositionalArg]) {
                 return [args.slice(1), this.commands[firstPositionalArg]];
@@ -322,7 +328,7 @@ Usage: ${this.name} [subcommand] [options]
                         ?? invalidConfig(`Subcommand "${firstPositionalArg}" was aliased to ${this.aliases[firstPositionalArg]}, which is not a valid subcommand`)];
             }
             else
-                return [args, defaultCommand];
+                return [args, this.defaultSubcommand];
         })();
         if (command.argOptions.allowHelpNamedArg) {
             if ("help" in namedArgs || "?" in namedArgs) {

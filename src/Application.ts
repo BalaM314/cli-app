@@ -213,15 +213,18 @@ export class Application {
 	commands: Record<string, Subcommand> = {};
 	/** Stores all command aliases. */
 	aliases: Record<string, string> = {};
+	/** The default subcommand, which is run if the user does not specify a subcommand. */
+	defaultSubcommand: Subcommand;
 	/** The directory containing this application's main file. Uses slash or backslash dependent on platform. */
-	public sourceDirectory:string;
+	public sourceDirectory: string;
 	private currentRunOptions: ApplicationRunOptions | null = null;
 	constructor(
 		/** The name used to run this application. Will be used in error suggestions. */
-		public name:string,
-		public description:string
+		public name: string,
+		/** A description for this application. Will be used in help messages. */
+		public description: string,
 	){
-		this.commands["help"] = new Subcommand(
+		const helpCommand = new Subcommand(
 			"help",
 			this.runHelpCommand.bind(this),
 			"Displays help information about all subcommands or a specific subcommand.",
@@ -236,6 +239,8 @@ export class Application {
 				unexpectedNamedArgCheck: "warn",
 			}
 		);
+		this.commands["help"] = helpCommand;
+		this.defaultSubcommand = helpCommand;
 		this.sourceDirectory = "null";
 	}
 	/**
@@ -281,7 +286,9 @@ export class Application {
 					...this,
 					impl(impl){
 						if(app.commands[name]) invalidConfig(`Cannot register a subcommand with name "${name}" because there is already a subcommand with that name`);
-						app.commands[name] = new Subcommand(this._name, impl, this._description, argOptions, this._default);
+						const subcommand = new Subcommand(this._name, impl, this._description, argOptions, this._default);
+						app.commands[name] = subcommand;
+						if(this._default) app.defaultSubcommand = subcommand;
 						this._aliases.forEach(alias => app.aliases[alias] = name);
 					}
 				};
@@ -525,14 +532,14 @@ Usage: ${this.name} [subcommand] [options]
 		const { namedArgs, firstPositionalArg } = Application.parseArgs(args);
 		//Set "help" to the default command: if someone runs `command nonexistentsubcommand ...rest`,
 		//it will get interpreted as `command help nonexistentsubcommand ...rest`, which will generate the correct error message.
-		const defaultCommand = Object.values(this.commands).find(command => command?.defaultCommand) ?? this.commands["help"]!; //TODO compute in .command()
+
 		let [newArgs, command]:readonly [string[], Subcommand] = (() => {
 			if(firstPositionalArg && this.commands[firstPositionalArg]){
 				return [args.slice(1), this.commands[firstPositionalArg]];
 			} else if(firstPositionalArg && this.aliases[firstPositionalArg]){
 				return [args.slice(1), this.commands[this.aliases[firstPositionalArg]]
 					?? invalidConfig(`Subcommand "${firstPositionalArg}" was aliased to ${this.aliases[firstPositionalArg]}, which is not a valid subcommand`)];
-			} else return [args, defaultCommand];
+			} else return [args, this.defaultSubcommand];
 		})();
 		if(command.argOptions.allowHelpNamedArg){
 			if("help" in namedArgs || "?" in namedArgs){

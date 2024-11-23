@@ -149,17 +149,22 @@ export declare const arg: () => NamedArgBuilderInitial;
 export declare class Application {
     /** The name used to run this application. Will be used in error suggestions. */
     name: string;
+    /** A description for this application. Will be used in help messages. */
     description: string;
     /** Stores all subcommands. */
     commands: Record<string, Subcommand>;
     /** Stores all command aliases. */
     aliases: Record<string, string>;
+    /** The default subcommand, which is run if the user does not specify a subcommand. */
+    defaultSubcommand: Subcommand;
     /** The directory containing this application's main file. Uses slash or backslash dependent on platform. */
     sourceDirectory: string;
     private currentRunOptions;
     constructor(
     /** The name used to run this application. Will be used in error suggestions. */
-    name: string, description: string);
+    name: string, 
+    /** A description for this application. Will be used in help messages. */
+    description: string);
     /**
      * Adds a subcommand to this application.
      * Uses the builder pattern.
