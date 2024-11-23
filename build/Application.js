@@ -56,10 +56,10 @@ export class Application {
         /** Stores all command aliases. */
         this.aliases = {};
         this.currentRunOptions = null;
-        this.commands["help"] = new Subcommand("help", this.runHelpCommand.bind(this), "Displays help on all commands or a specific subcommand.", {
+        this.commands["help"] = new Subcommand("help", this.runHelpCommand.bind(this), "Displays help information about all subcommands or a specific subcommand.", {
             positionalArgs: [{
-                    name: "command",
-                    description: "The command to get help on.",
+                    name: "subcommand",
+                    description: "The subcommand to get information about.",
                     optional: true
                 }],
             namedArgs: {},
@@ -85,7 +85,7 @@ export class Application {
                     ...this,
                     impl(impl) {
                         if (app.commands[name])
-                            invalidConfig(`Cannot register a command with name "${name}" because there is already a command with that name`);
+                            invalidConfig(`Cannot register a subcommand with name "${name}" because there is already a subcommand with that name`);
                         app.commands[name] = new Subcommand(this._name, impl, this._description, argOptions, this._default);
                         this._aliases.forEach(alias => app.aliases[alias] = name);
                     }
@@ -180,7 +180,7 @@ export class Application {
                     : `--${name}${opt._valueless ? `` : ` <${name}>`}`).join(" ");
                 const outputText = new StringBuilder()
                     .addLine()
-                    .addLine(`Help for command ${command.name}:`)
+                    .addLine(`Help for subcommand ${command.name}:`)
                     .addLine(command.description)
                     .add((this.name == command.name && command.defaultCommand) ? `Usage: ${this.name}` : `Usage: ${this.name} ${command.name}`)
                     .addWord(positionalArgsFragment)
@@ -201,17 +201,17 @@ export class Application {
                 process.stdout.write(outputText.text());
             }
             else {
-                console.log(`Unknown command ${firstPositionalArg}. Run ${this.name} help for a list of all commands.`);
+                console.log(`Unknown subcommand ${firstPositionalArg}. Run ${this.name} help for a list of all commands.`);
             }
         }
         else {
             console.log(`${this.name}: ${this.description}
 
-Usage: ${this.name} [command] [options]
-	List of all commands:
+Usage: ${this.name} [subcommand] [options]
+	List of all subcommands:
 `);
             for (const command of Object.values(this.commands)) {
-                console.log(`\t${command?.name}: ${command?.description}`);
+                console.log(`\t${command?.name}: ${command?.description ?? "No description provided."}`);
             }
             for (const [alias, name] of Object.entries(this.aliases)) {
                 console.log(`\t${alias}: alias for ${name}`);
@@ -319,7 +319,7 @@ Usage: ${this.name} [command] [options]
             }
             else if (firstPositionalArg && this.aliases[firstPositionalArg]) {
                 return [args.slice(1), this.commands[this.aliases[firstPositionalArg]]
-                        ?? invalidConfig(`Subcommand "${firstPositionalArg}" was aliased to ${this.aliases[firstPositionalArg]}, which is not a valid command`)];
+                        ?? invalidConfig(`Subcommand "${firstPositionalArg}" was aliased to ${this.aliases[firstPositionalArg]}, which is not a valid subcommand`)];
             }
             else
                 return [args, defaultCommand];
@@ -415,7 +415,7 @@ export class Subcommand {
         //Handle positional args
         if (positionalArgs.length > this.argOptions.positionalArgs.length) {
             //Count check
-            const message = `this command expects at most ${this.argOptions.positionalArgs.length} positional arguments, but ${positionalArgs.length} arguments were passed`;
+            const message = `this subcommand expects at most ${this.argOptions.positionalArgs.length} positional arguments, but ${positionalArgs.length} arguments were passed`;
             if (this.argOptions.positionalArgCountCheck == "error")
                 fail(message + `\n` + usageInstructionsMessage);
             else if (this.argOptions.positionalArgCountCheck == "warn")
@@ -429,7 +429,7 @@ export class Subcommand {
                     positionalArgs[i] = undefined;
                 else
                     fail(`Missing required positional argument "${arg.name}"
-this command expects at least ${this.argOptions.positionalArgs.filter(o => !o.optional).length} positional arguments, but ${positionalArgs.length} arguments were passed
+this subcommand expects at least ${this.argOptions.positionalArgs.filter(o => !o.optional).length} positional arguments, but ${positionalArgs.length} arguments were passed
 ${usageInstructionsMessage}`);
             }
         }
