@@ -8,6 +8,8 @@ You should have received a copy of the GNU Lesser General Public License along w
 Contains the code for the Application class, which represents a command-line application.
 */
 
+import { ApplicationError } from "./classes.js";
+
 export function invalidConfig(message: string):never {
 	throw new Error(`cli-app configuration error: ${message}`);
 }
@@ -20,6 +22,6 @@ export function crash(message: string):never {
  * Throws an {@link ApplicationError}, causing the app to terminate with a non-zero exit code and a plain error message.
  * Use this to write guard clauses.
  */
-export function fail(message: string):never {
-	throw new Error(`${message}. This is an error with @balam314/cli-app.`);
+export function fail(message: string, exitCode = 1):never {
+	throw new ApplicationError(message, exitCode);
 }

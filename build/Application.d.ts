@@ -2,19 +2,19 @@ import type { Expand } from "./types.js";
 /** Extra options to customize the behavior of {@link Application.run}. */
 export type ApplicationRunOptions = {
     /**
-     * If the command handler throws an ApplicationError, normally, this function will catch it and print an error message.
-     * If this option is set, the error will be immediately rethrown. Useful for writing tests.
+     * If the command handler throws an ApplicationError, normally, {@link Application.run} will catch it and print an error message, then resolve.
+     * If this option is set, the error will be immediately rethrown, causing Application.run to reject, which will print a stack trace. Useful for writing tests.
      *
      * Default: `false`.
      */
     readonly throwOnError?: boolean;
     /**
-     * If this option is set, {@link process.exit()} will be called when the command handler returns a numeric exit code.
-     * Otherwise, this function will throw an error if the exit code is non-zero.
+     * If this option is set, {@link process.exitCode} will be set when the command handler returns a numeric value. Async operations will continue to run.
+     * Otherwise, a numeric return value will cause a promise rejection.
      *
      * Default: `true`.
      */
-    readonly exitProcessOnHandlerReturn?: boolean;
+    readonly setProcessExitCodeOnHandlerReturn?: boolean;
 };
 /** Passed while defining a command. */
 export type PositionalArgOptions = {

@@ -9,7 +9,7 @@ Contains utility classes.
 */
 
 export class ApplicationError extends Error {
-	constructor(message?:string){
+	constructor(message?:string, public exitCode = 1){
 		super(message);
 		this.name = "ApplicationError";
 	}
@@ -44,18 +44,25 @@ export class StringBuilder {
 		return this;
 	}
 
+	/** Adds a newline. */
 	addLine():StringBuilder;
+	/** Adds a string followed by a newline. If the string is empty or undefined, does nothing. */
 	addLine(message:string | undefined):StringBuilder;
+	/** Adds `message` followed by a newline if `condition` is true. */
 	addLine(condition:boolean, message:string):StringBuilder;
 	addLine(arg1?:string | boolean, arg2?:string){
-		if(arg1 == undefined){
+		if(arguments.length === 0){
 			this.buffer += "\n";
-		} else if(typeof arg1 == "string" && arg1.trim().length > 0){
-			this.buffer += arg1;
-			this.buffer += "\n";
-		} else if(arg1){
-			this.buffer += arg2;
-			this.buffer += "\n";
+		} else if(arguments.length == 1){
+			if(typeof arg1 == "string" && arg1.trim().length > 0){
+				this.buffer += arg1;
+				this.buffer += "\n";
+			}
+		} else if(arguments.length == 2){
+			if(arg1 === true){
+				this.buffer += arg2;
+				this.buffer += "\n";
+			}
 		}
 		return this;
 	}

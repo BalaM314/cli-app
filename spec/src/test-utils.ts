@@ -16,6 +16,17 @@ export function applicationError(message:string):jasmine.AsymmetricMatcher<unkno
 	};
 }
 
+export function error(message:string):jasmine.AsymmetricMatcher<unknown> {
+	return {
+		asymmetricMatch(received){
+			return received instanceof Error && received.constructor === Error && received.message.includes(message);
+		},
+		jasmineToString(){
+			return `<ApplicationError ${message}>`;
+		}
+	};
+}
+
 export function delay(ms:number):Promise<void> {
 	return new Promise<void>(resolve => setTimeout(resolve, ms));
 }
@@ -32,7 +43,7 @@ export function types<A, B>():[A] extends [B] ? [B] extends [A] ? {
 
 export const testOptions:ApplicationRunOptions = {
 	throwOnError: true,
-	exitProcessOnHandlerReturn: false,
+	setProcessExitCodeOnHandlerReturn: false,
 };
 
 export const fakePathToApp = path.join(process.cwd(), "build/test.js");

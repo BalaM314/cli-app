@@ -8,8 +8,9 @@ You should have received a copy of the GNU Lesser General Public License along w
 Contains utility classes.
 */
 export class ApplicationError extends Error {
-    constructor(message) {
+    constructor(message, exitCode = 1) {
         super(message);
+        this.exitCode = exitCode;
         this.name = "ApplicationError";
     }
 }
@@ -40,16 +41,20 @@ export class StringBuilder {
         return this;
     }
     addLine(arg1, arg2) {
-        if (arg1 == undefined) {
+        if (arguments.length === 0) {
             this.buffer += "\n";
         }
-        else if (typeof arg1 == "string" && arg1.trim().length > 0) {
-            this.buffer += arg1;
-            this.buffer += "\n";
+        else if (arguments.length == 1) {
+            if (typeof arg1 == "string" && arg1.trim().length > 0) {
+                this.buffer += arg1;
+                this.buffer += "\n";
+            }
         }
-        else if (arg1) {
-            this.buffer += arg2;
-            this.buffer += "\n";
+        else if (arguments.length == 2) {
+            if (arg1 === true) {
+                this.buffer += arg2;
+                this.buffer += "\n";
+            }
         }
         return this;
     }

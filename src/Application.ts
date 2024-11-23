@@ -9,7 +9,7 @@ Contains the code for the Application class, which represents a command-line app
 */
 
 import path from "node:path";
-import fs, { openSync } from "node:fs";
+import fs from "node:fs";
 import { ApplicationError, StringBuilder } from "./classes.js";
 import type { Expand, OmitFunctionProperties, PickFunctionProperties } from "./types.js";
 import { crash, fail, invalidConfig } from "./funcs.js";
@@ -17,19 +17,19 @@ import { crash, fail, invalidConfig } from "./funcs.js";
 /** Extra options to customize the behavior of {@link Application.run}. */
 export type ApplicationRunOptions = {
 	/**
-	 * If the command handler throws an ApplicationError, normally, this function will catch it and print an error message.
-	 * If this option is set, the error will be immediately rethrown. Useful for writing tests.
+	 * If the command handler throws an ApplicationError, normally, {@link Application.run} will catch it and print an error message, then resolve.
+	 * If this option is set, the error will be immediately rethrown, causing Application.run to reject, which will print a stack trace. Useful for writing tests.
 	 * 
 	 * Default: `false`.
 	 */
 	readonly throwOnError?: boolean;
 	/**
-	 * If this option is set, {@link process.exit()} will be called when the command handler returns a numeric exit code.
-	 * Otherwise, this function will throw an error if the exit code is non-zero.
+	 * If this option is set, {@link process.exitCode} will be set when the command handler returns a numeric value. Async operations will continue to run.
+	 * Otherwise, a numeric return value will cause a promise rejection.
 	 * 
 	 * Default: `true`.
 	 */
-	readonly exitProcessOnHandlerReturn?: boolean;
+	readonly setProcessExitCodeOnHandlerReturn?: boolean;
 };
 
 /** Passed while defining a command. */
@@ -445,7 +445,7 @@ Usage: ${this.name} [command] [options]
 		const positionalArgs:string[] = [];
 		const args = providedArgs.slice();
 		let firstPositionalArg: string | undefined = undefined;
-		for(let i = 0;; i ++){
+		for(let i = 1;; i ++){
 
 			const arg = args.shift(); //Grab the first arg
 			if(arg == undefined) break; //If it doesn't exist, return
@@ -509,7 +509,7 @@ Usage: ${this.name} [command] [options]
 		if(rawArgs.length < 2) crash(`Application.run() received invalid argv: process.argv should include with "node path/to/filename.js" followed`);
 		const nodeArgs = rawArgs.slice(0, 2) as [string, string];
 		const {
-			exitProcessOnHandlerReturn = true,
+			setProcessExitCodeOnHandlerReturn = true,
 			throwOnError = false,
 		} = runOptions;
 
@@ -545,13 +545,14 @@ Usage: ${this.name} [command] [options]
 		try {
 			const result = await command.run(newArgs, nodeArgs, this);
 			if(typeof result == "number"){
-				if(exitProcessOnHandlerReturn) process.exit(result);
+				if(setProcessExitCodeOnHandlerReturn) process.exitCode = result;
 				else if(result != 0) throw new Error(`Non-zero exit code: ${result}`);
 			}
 		} catch(err){
 			if(throwOnError) throw err;
 			if(err instanceof ApplicationError){
 				console.error(`Error: ${err.message}`);
+				if(setProcessExitCodeOnHandlerReturn) process.exitCode = err.exitCode;
 			} else {
 				console.error("The command encountered an unhandled runtime error.");
 				console.error(err);

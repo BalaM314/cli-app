@@ -232,7 +232,7 @@ Usage: ${this.name} [command] [options]
         const positionalArgs = [];
         const args = providedArgs.slice();
         let firstPositionalArg = undefined;
-        for (let i = 0;; i++) {
+        for (let i = 1;; i++) {
             const arg = args.shift(); //Grab the first arg
             if (arg == undefined)
                 break; //If it doesn't exist, return
@@ -300,7 +300,7 @@ Usage: ${this.name} [command] [options]
         if (rawArgs.length < 2)
             crash(`Application.run() received invalid argv: process.argv should include with "node path/to/filename.js" followed`);
         const nodeArgs = rawArgs.slice(0, 2);
-        const { exitProcessOnHandlerReturn = true, throwOnError = false, } = runOptions;
+        const { setProcessExitCodeOnHandlerReturn = true, throwOnError = false, } = runOptions;
         this.currentRunOptions = runOptions;
         this.sourceDirectory = path.join(fs.realpathSync(rawArgs[1]), "..");
         //We need to do some argument parsing to determine which subcommand to run
@@ -334,8 +334,8 @@ Usage: ${this.name} [command] [options]
         try {
             const result = await command.run(newArgs, nodeArgs, this);
             if (typeof result == "number") {
-                if (exitProcessOnHandlerReturn)
-                    process.exit(result);
+                if (setProcessExitCodeOnHandlerReturn)
+                    process.exitCode = result;
                 else if (result != 0)
                     throw new Error(`Non-zero exit code: ${result}`);
             }
@@ -345,6 +345,8 @@ Usage: ${this.name} [command] [options]
                 throw err;
             if (err instanceof ApplicationError) {
                 console.error(`Error: ${err.message}`);
+                if (setProcessExitCodeOnHandlerReturn)
+                    process.exitCode = err.exitCode;
             }
             else {
                 console.error("The command encountered an unhandled runtime error.");
