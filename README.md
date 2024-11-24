@@ -4,7 +4,7 @@ A framework for creating TypeScript or JavaScript CLI applications.
 ## Feature list
 * Type safety
 	* Uses the builder pattern
-	* Arguments will be typed as `string`, `string | null | undefined`, `boolean`, or `true` depending the configuration
+	* Arguments passed to the handler will be typed as `string`, `string | null | undefined`, `boolean`, or `true` depending on the argument configuration
 * JSDoc comments
 * Named arguments (passed with `--name value`)
 	* Optional named arguments
@@ -22,7 +22,7 @@ A framework for creating TypeScript or JavaScript CLI applications.
 	* Apps with only one subcommand
 * Categories (such as `gh repo clone`)
 * Test support
-	* the App.run() method can be configured to reject instead of printing an error message, which is easy to test
+	* the App.run() method can be configured to reject instead of printing an error message
 
 ## Examples
 
