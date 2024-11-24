@@ -30,13 +30,13 @@ export type PositionalArgOptions = {
     readonly default?: string | null;
 };
 /** Passed while defining a command. */
-export type ArgOptions<TNamedArgs extends Record<string, NamedArgData> = Record<string, NamedArgData>> = {
+export type ArgOptions<TNamedArgs extends Record<string, NamedArgData> = Record<string, NamedArgData>, TPositionalArgs extends PositionalArgOptions[] = PositionalArgOptions[]> = {
     /** Named arguments, which are passed like `--name value` or `--name=value`. */
     readonly namedArgs?: TNamedArgs;
     /** Aliases for named args' names. */
     readonly aliases?: Record<string, string>;
     /** Positional arguments, which are passed like `value1 value2`... */
-    readonly positionalArgs?: PositionalArgOptions[];
+    readonly positionalArgs?: TPositionalArgs;
     /**
      * Specifies the behavior if there are more positional args than the command is supposed to accept.
      *
@@ -57,11 +57,13 @@ export type ArgOptions<TNamedArgs extends Record<string, NamedArgData> = Record<
     readonly allowHelpNamedArg?: boolean;
 };
 /** Computes the type of the arguments passed to a command's handler, given the parameters defined previously. */
-export type ComputeOptions<TNamedArgs extends Record<string, NamedArgData> = Record<string, NamedArgData>> = {
+export type ComputeOptions<TNamedArgs extends Record<string, NamedArgData> = Record<string, NamedArgData>, TPositionalArgs extends PositionalArgOptions[] = PositionalArgOptions[]> = {
     /** All named args specified with --name value. */
     readonly namedArgs: {} extends TNamedArgs ? {} : Record<string, NamedArgData> extends TNamedArgs ? Record<string, string | boolean | undefined | null> : NamedArgs<TNamedArgs>;
     /** Positional args specified by simply stating them. */
-    readonly positionalArgs: Array<string | undefined>;
+    readonly positionalArgs: PositionalArgOptions extends TPositionalArgs ? string[] : {
+        [K in keyof TPositionalArgs]: TPositionalArgs[K]["default"] extends string ? string : TPositionalArgs[K]["optional"] extends true ? (string | undefined) : string;
+    };
     readonly commandName: string;
     /** All named and positional arguments passed to the command, not including the command name. */
     readonly unparsedArgs: readonly string[];
@@ -75,7 +77,7 @@ type NamedArgs<NamedArgOpts extends Record<string, NamedArgData>> = {
     -readonly [K in keyof NamedArgOpts]: NamedArgFrom<NamedArgOpts[K]>;
 };
 type NamedArgFrom<NamedArgOpt extends NamedArgData> = NamedArgOpt["~valueless"] extends true ? NamedArgOpt["~optional"] extends false ? true : (false | true) : NamedArgOpt["~optional"] extends true ? NamedArgOpt["~default"] extends string ? string : (string | undefined | null) : string;
-export type CommandHandler<T extends Record<string, NamedArgData>> = (opts: Expand<ComputeOptions<T>>, app: Application) => void | number | Promise<void | number>;
+export type CommandHandler<TNamedArgs extends Record<string, NamedArgData>, TPositionalArgs extends PositionalArgOptions[]> = (opts: Expand<ComputeOptions<TNamedArgs, TPositionalArgs>>, app: Application) => void | number | Promise<void | number>;
 /** The data that gets filled out by the command builder. */
 export type CommandData = {
     readonly "~name": string;
@@ -94,7 +96,7 @@ export type CommandBuilder = CommandData & {
     /** Makes this subcommand the default command, which will be invoked if the user does not specify a subcommand. Only one subcommand can be marked as the default one. */
     default<T extends Partial<CommandBuilder>>(this: T): Omit<T, "default">;
     /** Defines the type of the parameters this command accepts. */
-    args<TThis extends Partial<CommandBuilder>, const TArgs extends Record<string, NamedArgData>>(this: TThis, argOptions: ArgOptions<TArgs>): Omit<TThis, "description" | "aliases" | "args"> & {
+    args<TThis extends Partial<CommandBuilder>, const TNamedArgs extends Record<string, NamedArgData>, const TPositionalArgs extends PositionalArgOptions[]>(this: TThis, argOptions: ArgOptions<TNamedArgs, TPositionalArgs>): Omit<TThis, "description" | "aliases" | "args"> & {
         /**
          * Sets the function that will be called when this command is run.
          *
@@ -102,7 +104,7 @@ export type CommandBuilder = CommandData & {
          * - If the function returns an exit code (sync or async), the app will be closed immediately with that exit code.
          * - If the function returns undefined (sync or async), cli-app will do nothing, and NodeJS's standard behavior will occur.
          */
-        impl(this: CommandData, impl: CommandHandler<TArgs>): void;
+        impl(this: CommandData, impl: CommandHandler<TNamedArgs, TPositionalArgs>): void;
     };
 };
 /** The data that gets filled out by the named argument builder. */
@@ -278,7 +280,7 @@ export declare class Application {
  */
 export declare class Subcommand {
     name: string;
-    handler: CommandHandler<any>;
+    handler: CommandHandler<any, any>;
     description: string | undefined;
     defaultCommand: boolean;
     /**
@@ -289,7 +291,8 @@ export declare class Subcommand {
      * Set to an {@link Application} if this subcommand is a category.
      */
     subcategoryApp: Application | null;
-    constructor(name: string, handler: CommandHandler<any>, description: string | undefined, argOptions?: ArgOptions<Record<string, NamedArgData>>, defaultCommand?: boolean);
+    constructor(name: string, handler: CommandHandler<any, any>, //use any for contravariance
+    description: string | undefined, argOptions?: ArgOptions<Record<string, NamedArgData>>, defaultCommand?: boolean);
     /** Runs this subcommand. Do not call directly, call the application's run method instead. */
     run(args: readonly string[], nodeArgs: [string, string], application: Application): number | void | Promise<number | void>;
 }

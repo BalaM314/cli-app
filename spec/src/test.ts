@@ -39,7 +39,15 @@ myApp.command("doOtherStuff")
 				.required(),
 		},
 		aliases: {},
-		positionalArgs: []
+		positionalArgs: [{
+			name: "required",
+		},{
+			name: "defaultVal",
+			default: "default value for defaultVal",
+		},{
+			name: "optional",
+			optional: true,
+		}]
 	})
 	.impl((opts, app) => {
 

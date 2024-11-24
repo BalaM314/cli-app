@@ -368,7 +368,8 @@ Usage: ${this.name} [subcommand] [options]
  * Represents one subcommand of an application or script.
  */
 export class Subcommand {
-    constructor(name, handler, description, argOptions = { namedArgs: {}, positionalArgs: [] }, defaultCommand = false) {
+    constructor(name, handler, //use any for contravariance
+    description, argOptions = { namedArgs: {}, positionalArgs: [] }, defaultCommand = false) {
         this.name = name;
         this.handler = handler;
         this.description = description;
@@ -487,7 +488,7 @@ ${usageInstructionsMessage}`);
         });
         return this.handler({
             commandName: this.name,
-            positionalArgs,
+            positionalArgs: positionalArgs,
             namedArgs,
             unparsedArgs: args,
             nodeArgs,
