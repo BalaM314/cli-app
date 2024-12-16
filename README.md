@@ -1,6 +1,12 @@
 # cli-app
 A framework for creating TypeScript or JavaScript CLI applications.
 
+## Installation
+
+```sh
+npm i @balam314/cli-app
+```
+
 ## Feature list
 * Type safety
 	* Uses the builder pattern
@@ -63,11 +69,11 @@ myApp.command("count-lines")
 	})
 	.impl(async ({positionalArgs}) => {
 		const files = await fs.readdir(positionalArgs[0])
-			.catch(() => fail(`Directory ${positionalArgs[0]} does not exist or is not accessible.`), 1);
+			.catch(() => fail(`Directory ${positionalArgs[0]} does not exist or is not accessible.`, 1));
 		console.log(`Counting lines in ${files.length} files...`);
 		const fileData = await Promise.all(files.map(file =>
 			fs.readFile(file, "utf-8")
-				.catch(() => fail(`Failed to read file ${file}`), 2)
+				.catch(() => fail(`Failed to read file ${file}`, 2))
 		));
 		const lines = fileData.map(file => file.split(/\r?\n/).length);
 		const totalLines = lines.reduce((a, b) => a + b);
