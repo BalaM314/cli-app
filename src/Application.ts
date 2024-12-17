@@ -98,6 +98,7 @@ export type ComputeOptions<
 			TPositionalArgs[K]["optional"] extends true ? (string | undefined) :
 			string
 	}
+	/** The name of the subcommand. */
 	readonly commandName: string;
 	/** All named and positional arguments passed to the command, not including the command name. */
 	readonly unparsedArgs: readonly string[];
@@ -108,15 +109,24 @@ export type ComputeOptions<
 	readonly nodeArgs: readonly [string, string];
 }
 
+/** Computes the type of the named arguments passed to a command's handler, given the named arg parameters defined previously. */
 type NamedArgs<NamedArgOpts extends Record<string, NamedArgData>> = {
 	-readonly [K in keyof NamedArgOpts]: NamedArgFrom<NamedArgOpts[K]>;
 };
 
+/**
+ * Computes the type of one named argument given the configuration information.
+ ** Returns `string` if it is required.
+ ** Returns `string | undefined` if it is optional.
+ ** Returns `boolean` if it is a valueless named argument.
+ ** Returns `true` if it is a valueless and required named argument.
+ */
 type NamedArgFrom<NamedArgOpt extends NamedArgData> =
 	NamedArgOpt["~valueless"] extends true ?
 		NamedArgOpt["~optional"] extends false ? true : (false | true)
 	: NamedArgOpt["~optional"] extends true ? NamedArgOpt["~default"] extends string ? string : (string | undefined | null) : string;
 
+/** The handler for a subcommand, which is the function that gets run when the command is invoked. */
 export type CommandHandler<
 	TNamedArgs extends Record<string, NamedArgData>,
 	TPositionalArgs extends PositionalArgOptions[],
@@ -129,10 +139,10 @@ export type CommandHandler<
 /** The data that gets filled out by the command builder. */
 export type CommandData = {
 	//Properties are prefixed with ~ because it is sorted after all alphabetic characters, so the intellisense list suggests functions first.
-	readonly "~name": string;
-	readonly "~description": string | undefined;
-	readonly "~default": boolean;
-	readonly "~aliases": string[];
+	/** Please use the builder methods instead of this property. */ readonly "~name": string;
+	/** Please use the builder methods instead of this property. */ readonly "~description": string | undefined;
+	/** Please use the builder methods instead of this property. */ readonly "~default": boolean;
+	/** Please use the builder methods instead of this property. */ readonly "~aliases": string[];
 };
 /** Contains functions that use the builder pattern to produce a {@link CommandData}. */
 export type CommandBuilder = CommandData & {
@@ -174,11 +184,11 @@ type CommandBuilderInitial = CommandBuilder & {
 /** The data that gets filled out by the named argument builder. */
 type NamedArgData = {
 	//Properties are prefixed with ~ because it is sorted after all alphabetic characters, so the intellisense list suggests functions first.
-	readonly "~optional": boolean;
-	readonly "~valueless": boolean;
-	readonly "~default": string | undefined;
-	readonly "~description": string | undefined;
-	readonly "~aliases": string[];
+	/** Please use the builder methods instead of this property. */ readonly "~optional": boolean;
+	/** Please use the builder methods instead of this property. */ readonly "~valueless": boolean;
+	/** Please use the builder methods instead of this property. */ readonly "~default": string | undefined;
+	/** Please use the builder methods instead of this property. */ readonly "~description": string | undefined;
+	/** Please use the builder methods instead of this property. */ readonly "~aliases": string[];
 };
 /** Contains functions that use the builder pattern to produce a {@link NamedArgData}. */
 type NamedArgBuilder = NamedArgData & {
@@ -223,8 +233,9 @@ type NamedArgBuilder = NamedArgData & {
 };
 /** The initial state of the named argument builder, with defaults. */
 type NamedArgBuilderInitial = Omit<NamedArgBuilder, "required"> & {
-	readonly "~optional": false;
-	readonly "~valueless": false;
+	//Properties are prefixed with ~ because it is sorted after all alphabetic characters, so the intellisense list suggests functions first.
+	/** Please use the builder methods instead of this property. */ readonly "~optional": false;
+	/** Please use the builder methods instead of this property. */ readonly "~valueless": false;
 };
 /** Helper function to define a named argument. Uses the builder pattern. */
 export const arg:() => NamedArgBuilderInitial = (() => {
@@ -359,10 +370,55 @@ export class Application {
 		return builder;
 	}
 	/**
-	 * Same as {@link command()}, but for applications with only one subcommand. This will slightly change the display of help messages.
+	 * Same as {@link command()}, but for applications with only one subcommand.
+	 * 
+	 * The name and description will be the same as the application's name and description, and the command will be set as default.
+	 * 
+	 * This will slightly change the display of help messages, to make them more applicable for an application with only one subcommand.
+	 * 
+	 * Example usage:
+	 * ```
+	 * myApp.onlyCommand()
+	 * 	.args({
+	 * 		namedArgs: {
+	 * 			arg1: arg(),
+	 * 		}
+	 * 	})
+	 * 	.impl((args) => {
+	 * 		console.log(`Hello ${args.arg1}`);
+	 * 	})
+	 * ```
+	 * 
+	 * Without onlyCommand:
+	 * ```sh
+	 * $ my-app help
+	 * my-app: Description for my-app
+	 * Usage: my-app [subcommand] [options]
+	 * 	List of all subcommands:
+	 * 
+	 * 	my-app: Description for my-app
+	 * $ my-app help my-app
+	 * Help for subcommand my-app:
+	 * Description for my-app
+	 * Usage: my-app my-app [--arg <arg>]
+	 * 
+	 * <arg>: No description provided
+	 * ```
+	 * This is confusing.
+	 * 
+	 * With onlyCommand:
+	 * ```sh
+	 * $ my-app help
+	 * Help for command my-app:
+	 * Description for my-app.
+	 * Usage: my-app [--arg <arg>]
+	 * 
+	 * <arg>: No description provided
+	 * ```
 	 */
 	onlyCommand(){
-		if(Object.keys(this.commands).length > 1) invalidConfig(`onlyCommand() is not valid here: there are already other commands defined`);
+		if(Object.keys(this.commands).length > 1)
+			invalidConfig(`onlyCommand() is not valid here: there are already other commands defined`);
 		return this.command(this.name, this.description).default().aliases();
 	}
 	/**
@@ -405,10 +461,14 @@ export class Application {
 		this.aliases[alias] = target;
 		return this;
 	}
+	/** Returns the name of this application's only command, if it exists. If there are zero or multiple commands, returns undefined. */
 	getOnlyCommand():string | undefined {
-		const commands = Object.entries(this.commands).filter(([name, command]) => name != "help" && command?.name == this.name);
-		if(commands.length == 1) return commands[0]![0];
-		else return undefined;
+		const commands = Object.entries(this.commands).filter(([name, command]) => name != "help");
+		if(commands.length == 1){
+			const [name, command] = commands[0]!;
+			if(name == this.name) return name;
+		}
+		return undefined;
 	}
 	/** Runs the help command for this application. Do not call directly. */
 	private runHelpCommand(opts:Expand<ComputeOptions<Record<string, NamedArgData>>>):number {
@@ -440,7 +500,7 @@ export class Application {
 						).join(" ");
 				const outputText = new StringBuilder()
 					.addLine()
-					.addLine(`Help for subcommand ${command.name}:`)
+					.addLine(`Help for ${this.getOnlyCommand() ? "command" : "subcommand"} ${command.name}:`)
 					.addLine(command.description)
 					.add((this.name == command.name && command.defaultCommand) ? `Usage: ${this.name}` : `Usage: ${this.name} ${command.name}`)
 					.addWord(positionalArgsFragment)
@@ -491,6 +551,13 @@ Usage: ${this.name} [subcommand] [options]
 	/**
 	 * Parses command line arguments into an object.
 	 * @param providedArgs Remove JS runtime options from process.argv.
+	 * @param valuelessOptions List of named arguments that do not have a corresponding value.
+	 * 
+	 * If an argument follows one of these named arguments, it will be interpreted as a positional argument.
+	 * 
+	 * Example: `--arg1 value1` will normally be parsed as `{arg1: "value1"}`,
+	 * 
+	 * but if valuelessOptions includes arg1, then it will be parsed as `{arg1: true}, ["value1"]`
 	 * @returns Formatted args.
 	 */
 	static parseArgs(providedArgs:readonly string[], valuelessOptions:readonly string[] = []):{
@@ -507,7 +574,7 @@ Usage: ${this.name} [subcommand] [options]
 		const positionalArgs:string[] = [];
 		const args = providedArgs.slice();
 		let firstPositionalArg: string | undefined = undefined;
-		for(let i = 1;; i ++){
+		for(let i = 1 ;; i ++){
 
 			const arg = args.shift(); //Grab the first arg
 			if(arg == undefined) break; //If it doesn't exist, return
@@ -568,7 +635,7 @@ Usage: ${this.name} [subcommand] [options]
 	public async run(rawArgs:readonly string[], runOptions:ApplicationRunOptions = {}):Promise<void> {
 		//This function does as little work as possible, and calls Subcommand.run()
 		
-		if(rawArgs.length < 2) crash(`Application.run() received invalid argv: process.argv should include with "node path/to/filename.js" followed`);
+		if(rawArgs.length < 2) crash(`Application.run() received invalid argv: process.argv should start with "node path/to/filename.js"`);
 		const nodeArgs = rawArgs.slice(0, 2) as [string, string];
 		const {
 			setProcessExitCodeOnHandlerReturn = true,
@@ -637,7 +704,7 @@ export class Subcommand {
 	subcategoryApp: Application | null = null;
 	constructor(
 		public name:string,
-		public handler:CommandHandler<any, any>, //use any for contravariance
+		public handler:CommandHandler<any, any>, //use any to avoid contravariance
 		public description:string | undefined,
 		argOptions:ArgOptions<Record<string, NamedArgData>> = {namedArgs: {}, positionalArgs: []},
 		public defaultCommand = false,

@@ -64,6 +64,7 @@ export type ComputeOptions<TNamedArgs extends Record<string, NamedArgData> = Rec
     readonly positionalArgs: PositionalArgOptions extends TPositionalArgs ? string[] : {
         [K in keyof TPositionalArgs]: TPositionalArgs[K]["default"] extends string ? string : TPositionalArgs[K]["optional"] extends true ? (string | undefined) : string;
     };
+    /** The name of the subcommand. */
     readonly commandName: string;
     /** All named and positional arguments passed to the command, not including the command name. */
     readonly unparsedArgs: readonly string[];
@@ -73,17 +74,26 @@ export type ComputeOptions<TNamedArgs extends Record<string, NamedArgData> = Rec
      */
     readonly nodeArgs: readonly [string, string];
 };
+/** Computes the type of the named arguments passed to a command's handler, given the named arg parameters defined previously. */
 type NamedArgs<NamedArgOpts extends Record<string, NamedArgData>> = {
     -readonly [K in keyof NamedArgOpts]: NamedArgFrom<NamedArgOpts[K]>;
 };
+/**
+ * Computes the type of one named argument given the configuration information.
+ ** Returns `string` if it is required.
+ ** Returns `string | undefined` if it is optional.
+ ** Returns `boolean` if it is a valueless named argument.
+ ** Returns `true` if it is a valueless and required named argument.
+ */
 type NamedArgFrom<NamedArgOpt extends NamedArgData> = NamedArgOpt["~valueless"] extends true ? NamedArgOpt["~optional"] extends false ? true : (false | true) : NamedArgOpt["~optional"] extends true ? NamedArgOpt["~default"] extends string ? string : (string | undefined | null) : string;
+/** The handler for a subcommand, which is the function that gets run when the command is invoked. */
 export type CommandHandler<TNamedArgs extends Record<string, NamedArgData>, TPositionalArgs extends PositionalArgOptions[]> = (opts: Expand<ComputeOptions<TNamedArgs, TPositionalArgs>>, app: Application) => void | number | Promise<void | number>;
 /** The data that gets filled out by the command builder. */
 export type CommandData = {
-    readonly "~name": string;
-    readonly "~description": string | undefined;
-    readonly "~default": boolean;
-    readonly "~aliases": string[];
+    /** Please use the builder methods instead of this property. */ readonly "~name": string;
+    /** Please use the builder methods instead of this property. */ readonly "~description": string | undefined;
+    /** Please use the builder methods instead of this property. */ readonly "~default": boolean;
+    /** Please use the builder methods instead of this property. */ readonly "~aliases": string[];
 };
 /** Contains functions that use the builder pattern to produce a {@link CommandData}. */
 export type CommandBuilder = CommandData & {
@@ -109,11 +119,11 @@ export type CommandBuilder = CommandData & {
 };
 /** The data that gets filled out by the named argument builder. */
 type NamedArgData = {
-    readonly "~optional": boolean;
-    readonly "~valueless": boolean;
-    readonly "~default": string | undefined;
-    readonly "~description": string | undefined;
-    readonly "~aliases": string[];
+    /** Please use the builder methods instead of this property. */ readonly "~optional": boolean;
+    /** Please use the builder methods instead of this property. */ readonly "~valueless": boolean;
+    /** Please use the builder methods instead of this property. */ readonly "~default": string | undefined;
+    /** Please use the builder methods instead of this property. */ readonly "~description": string | undefined;
+    /** Please use the builder methods instead of this property. */ readonly "~aliases": string[];
 };
 /** Contains functions that use the builder pattern to produce a {@link NamedArgData}. */
 type NamedArgBuilder = NamedArgData & {
@@ -168,8 +178,8 @@ type NamedArgBuilder = NamedArgData & {
 };
 /** The initial state of the named argument builder, with defaults. */
 type NamedArgBuilderInitial = Omit<NamedArgBuilder, "required"> & {
-    readonly "~optional": false;
-    readonly "~valueless": false;
+    /** Please use the builder methods instead of this property. */ readonly "~optional": false;
+    /** Please use the builder methods instead of this property. */ readonly "~valueless": false;
 };
 /** Helper function to define a named argument. Uses the builder pattern. */
 export declare const arg: () => NamedArgBuilderInitial;
@@ -224,7 +234,51 @@ export declare class Application {
         "~description": string;
     };
     /**
-     * Same as {@link command()}, but for applications with only one subcommand. This will slightly change the display of help messages.
+     * Same as {@link command()}, but for applications with only one subcommand.
+     *
+     * The name and description will be the same as the application's name and description, and the command will be set as default.
+     *
+     * This will slightly change the display of help messages, to make them more applicable for an application with only one subcommand.
+     *
+     * Example usage:
+     * ```
+     * myApp.onlyCommand()
+     * 	.args({
+     * 		namedArgs: {
+     * 			arg1: arg(),
+     * 		}
+     * 	})
+     * 	.impl((args) => {
+     * 		console.log(`Hello ${args.arg1}`);
+     * 	})
+     * ```
+     *
+     * Without onlyCommand:
+     * ```sh
+     * $ my-app help
+     * my-app: Description for my-app
+     * Usage: my-app [subcommand] [options]
+     * 	List of all subcommands:
+     *
+     * 	my-app: Description for my-app
+     * $ my-app help my-app
+     * Help for subcommand my-app:
+     * Description for my-app
+     * Usage: my-app my-app [--arg <arg>]
+     *
+     * <arg>: No description provided
+     * ```
+     * This is confusing.
+     *
+     * With onlyCommand:
+     * ```sh
+     * $ my-app help
+     * Help for command my-app:
+     * Description for my-app.
+     * Usage: my-app [--arg <arg>]
+     *
+     * <arg>: No description provided
+     * ```
      */
     onlyCommand(): Omit<Omit<Omit<CommandBuilder, "description"> & {
         "~description": string;
@@ -254,12 +308,20 @@ export declare class Application {
     category(name: string, description: string, callback: (app: Omit<Application, "onlyCommand" | "run">) => unknown): this;
     /** Creates an alias for a subcommand. */
     alias(alias: string, target: string): this;
+    /** Returns the name of this application's only command, if it exists. If there are zero or multiple commands, returns undefined. */
     getOnlyCommand(): string | undefined;
     /** Runs the help command for this application. Do not call directly. */
     private runHelpCommand;
     /**
      * Parses command line arguments into an object.
      * @param providedArgs Remove JS runtime options from process.argv.
+     * @param valuelessOptions List of named arguments that do not have a corresponding value.
+     *
+     * If an argument follows one of these named arguments, it will be interpreted as a positional argument.
+     *
+     * Example: `--arg1 value1` will normally be parsed as `{arg1: "value1"}`,
+     *
+     * but if valuelessOptions includes arg1, then it will be parsed as `{arg1: true}, ["value1"]`
      * @returns Formatted args.
      */
     static parseArgs(providedArgs: readonly string[], valuelessOptions?: readonly string[]): {
@@ -291,7 +353,7 @@ export declare class Subcommand {
      * Set to an {@link Application} if this subcommand is a category.
      */
     subcategoryApp: Application | null;
-    constructor(name: string, handler: CommandHandler<any, any>, //use any for contravariance
+    constructor(name: string, handler: CommandHandler<any, any>, //use any to avoid contravariance
     description: string | undefined, argOptions?: ArgOptions<Record<string, NamedArgData>>, defaultCommand?: boolean);
     /** Runs this subcommand. Do not call directly, call the application's run method instead. */
     run(args: readonly string[], nodeArgs: [string, string], application: Application): number | void | Promise<number | void>;

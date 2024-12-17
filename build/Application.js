@@ -112,7 +112,51 @@ export class Application {
         return builder;
     }
     /**
-     * Same as {@link command()}, but for applications with only one subcommand. This will slightly change the display of help messages.
+     * Same as {@link command()}, but for applications with only one subcommand.
+     *
+     * The name and description will be the same as the application's name and description, and the command will be set as default.
+     *
+     * This will slightly change the display of help messages, to make them more applicable for an application with only one subcommand.
+     *
+     * Example usage:
+     * ```
+     * myApp.onlyCommand()
+     * 	.args({
+     * 		namedArgs: {
+     * 			arg1: arg(),
+     * 		}
+     * 	})
+     * 	.impl((args) => {
+     * 		console.log(`Hello ${args.arg1}`);
+     * 	})
+     * ```
+     *
+     * Without onlyCommand:
+     * ```sh
+     * $ my-app help
+     * my-app: Description for my-app
+     * Usage: my-app [subcommand] [options]
+     * 	List of all subcommands:
+     *
+     * 	my-app: Description for my-app
+     * $ my-app help my-app
+     * Help for subcommand my-app:
+     * Description for my-app
+     * Usage: my-app my-app [--arg <arg>]
+     *
+     * <arg>: No description provided
+     * ```
+     * This is confusing.
+     *
+     * With onlyCommand:
+     * ```sh
+     * $ my-app help
+     * Help for command my-app:
+     * Description for my-app.
+     * Usage: my-app [--arg <arg>]
+     *
+     * <arg>: No description provided
+     * ```
      */
     onlyCommand() {
         if (Object.keys(this.commands).length > 1)
@@ -159,12 +203,15 @@ export class Application {
         this.aliases[alias] = target;
         return this;
     }
+    /** Returns the name of this application's only command, if it exists. If there are zero or multiple commands, returns undefined. */
     getOnlyCommand() {
-        const commands = Object.entries(this.commands).filter(([name, command]) => name != "help" && command?.name == this.name);
-        if (commands.length == 1)
-            return commands[0][0];
-        else
-            return undefined;
+        const commands = Object.entries(this.commands).filter(([name, command]) => name != "help");
+        if (commands.length == 1) {
+            const [name, command] = commands[0];
+            if (name == this.name)
+                return name;
+        }
+        return undefined;
     }
     /** Runs the help command for this application. Do not call directly. */
     runHelpCommand(opts) {
@@ -190,7 +237,7 @@ export class Application {
                     : `--${name}${opt["~valueless"] ? `` : ` <${name}>`}`).join(" ");
                 const outputText = new StringBuilder()
                     .addLine()
-                    .addLine(`Help for subcommand ${command.name}:`)
+                    .addLine(`Help for ${this.getOnlyCommand() ? "command" : "subcommand"} ${command.name}:`)
                     .addLine(command.description)
                     .add((this.name == command.name && command.defaultCommand) ? `Usage: ${this.name}` : `Usage: ${this.name} ${command.name}`)
                     .addWord(positionalArgsFragment)
@@ -232,6 +279,13 @@ Usage: ${this.name} [subcommand] [options]
     /**
      * Parses command line arguments into an object.
      * @param providedArgs Remove JS runtime options from process.argv.
+     * @param valuelessOptions List of named arguments that do not have a corresponding value.
+     *
+     * If an argument follows one of these named arguments, it will be interpreted as a positional argument.
+     *
+     * Example: `--arg1 value1` will normally be parsed as `{arg1: "value1"}`,
+     *
+     * but if valuelessOptions includes arg1, then it will be parsed as `{arg1: true}, ["value1"]`
      * @returns Formatted args.
      */
     static parseArgs(providedArgs, valuelessOptions = []) {
@@ -308,7 +362,7 @@ Usage: ${this.name} [subcommand] [options]
     async run(rawArgs, runOptions = {}) {
         //This function does as little work as possible, and calls Subcommand.run()
         if (rawArgs.length < 2)
-            crash(`Application.run() received invalid argv: process.argv should include with "node path/to/filename.js" followed`);
+            crash(`Application.run() received invalid argv: process.argv should start with "node path/to/filename.js"`);
         const nodeArgs = rawArgs.slice(0, 2);
         const { setProcessExitCodeOnHandlerReturn = true, throwOnError = false, } = runOptions;
         this.currentRunOptions = runOptions;
@@ -368,7 +422,7 @@ Usage: ${this.name} [subcommand] [options]
  * Represents one subcommand of an application or script.
  */
 export class Subcommand {
-    constructor(name, handler, //use any for contravariance
+    constructor(name, handler, //use any to avoid contravariance
     description, argOptions = { namedArgs: {}, positionalArgs: [] }, defaultCommand = false) {
         this.name = name;
         this.handler = handler;
