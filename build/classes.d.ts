@@ -1,14 +1,18 @@
 export declare class ApplicationError extends Error {
     exitCode: number;
+    name: string;
     constructor(message?: string, exitCode?: number);
 }
 /**Useful for building very long strings. */
 export declare class StringBuilder {
-    buffer: string;
-    constructor();
+    private buffer;
+    /** Adds text to the StringBuilder. */
     add(message: string): StringBuilder;
+    /** Adds text to the StringBuilder if `condition` is true. */
     add(condition: boolean, message: string): StringBuilder;
+    /** Adds text to the StringBuilder, and prepends a space, but only if `message` isn't empty. */
     addWord(message: string): StringBuilder;
+    /** Adds text to the StringBuilder, and prepends a space, but only if `condition` is true. */
     addWord(condition: boolean, message: string): StringBuilder;
     /** Adds a newline. */
     addLine(): StringBuilder;

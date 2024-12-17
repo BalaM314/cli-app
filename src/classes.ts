@@ -9,18 +9,19 @@ Contains utility classes.
 */
 
 export class ApplicationError extends Error {
+	name = "ApplicationError";
 	constructor(message?:string, public exitCode = 1){
 		super(message);
-		this.name = "ApplicationError";
 	}
 }
 
 /**Useful for building very long strings. */
 export class StringBuilder {
-	buffer = "";
-	constructor(){return this;}
+	private buffer = "";
 
+	/** Adds text to the StringBuilder. */
 	add(message:string):StringBuilder;
+	/** Adds text to the StringBuilder if `condition` is true. */
 	add(condition:boolean, message:string):StringBuilder;
 	add(arg1:string | boolean, arg2?:string){
 		if(typeof arg1 == "string"){
@@ -31,7 +32,9 @@ export class StringBuilder {
 		return this;
 	}
 
+	/** Adds text to the StringBuilder, and prepends a space, but only if `message` isn't empty. */
 	addWord(message:string):StringBuilder;
+	/** Adds text to the StringBuilder, and prepends a space, but only if `condition` is true. */
 	addWord(condition:boolean, message:string):StringBuilder;
 	addWord(arg1:string | boolean, arg2?:string){
 		if(typeof arg1 == "string" && arg1.length != 0){

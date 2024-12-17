@@ -18,7 +18,6 @@ export class ApplicationError extends Error {
 export class StringBuilder {
     constructor() {
         this.buffer = "";
-        return this;
     }
     add(arg1, arg2) {
         if (typeof arg1 == "string") {

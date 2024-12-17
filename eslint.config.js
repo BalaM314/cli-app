@@ -33,6 +33,7 @@ export default tseslint.config(
 			],
 			"linebreak-style": "off",
 			"semi": ["error", "always"],
+			"no-constructor-return": "error",
 			"no-unused-vars": "off",
 			"prefer-const": "warn",
 			"no-unexpected-multiline": "off",
