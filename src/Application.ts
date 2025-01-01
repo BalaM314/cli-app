@@ -66,6 +66,11 @@ export type ArgOptions<
 	 */
 	readonly positionalArgCountCheck?: "error" | "warn" | "ignore";
 	/**
+	 * Used for the "Usage: " line in the help message. Inserted after the generated usage instructions for all normal positional args.
+	 * Example: when set to "[-- extraArgs...]", the help message might say `Usage: application --namedArg <namedArg> <requiredPositional> [-- extraArgs...]`
+	 */
+	readonly positionalArgsText?: string;
+	/**
 	 * Specifies the behavior if there is a named arg that the command does not accept.
 	 * 
 	 * Default: `"error"`.
@@ -503,8 +508,9 @@ export class Application {
 					.addLine(`Help for ${this.getOnlyCommand() ? "command" : "subcommand"} ${command.name}:`)
 					.addLine(command.description)
 					.add((this.name == command.name && command.defaultCommand) ? `Usage: ${this.name}` : `Usage: ${this.name} ${command.name}`)
-					.addWord(positionalArgsFragment)
 					.addWord(namedArgsFragment)
+					.addWord(positionalArgsFragment)
+					.addWord(command.argOptions.positionalArgsText)
 					.addLine()
 					.addLine();
 
@@ -733,6 +739,7 @@ export class Subcommand {
 				) : a.optional ?? false,
 			})) ?? [],
 			positionalArgCountCheck: argOptions.positionalArgCountCheck ?? "ignore",
+			positionalArgsText: argOptions.positionalArgsText ?? "",
 			unexpectedNamedArgCheck: argOptions.unexpectedNamedArgCheck ?? "error",
 			allowHelpNamedArg: argOptions.allowHelpNamedArg ?? true,
 		};

@@ -240,8 +240,9 @@ export class Application {
                     .addLine(`Help for ${this.getOnlyCommand() ? "command" : "subcommand"} ${command.name}:`)
                     .addLine(command.description)
                     .add((this.name == command.name && command.defaultCommand) ? `Usage: ${this.name}` : `Usage: ${this.name} ${command.name}`)
-                    .addWord(positionalArgsFragment)
                     .addWord(namedArgsFragment)
+                    .addWord(positionalArgsFragment)
+                    .addWord(command.argOptions.positionalArgsText)
                     .addLine()
                     .addLine();
                 if (Object.entries(command.argOptions.namedArgs).length != 0) {
@@ -452,6 +453,7 @@ export class Subcommand {
                     true) : a.optional ?? false,
             })) ?? [],
             positionalArgCountCheck: argOptions.positionalArgCountCheck ?? "ignore",
+            positionalArgsText: argOptions.positionalArgsText ?? "",
             unexpectedNamedArgCheck: argOptions.unexpectedNamedArgCheck ?? "error",
             allowHelpNamedArg: argOptions.allowHelpNamedArg ?? true,
         };

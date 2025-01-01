@@ -44,6 +44,11 @@ export type ArgOptions<TNamedArgs extends Record<string, NamedArgData> = Record<
      */
     readonly positionalArgCountCheck?: "error" | "warn" | "ignore";
     /**
+     * Used for the "Usage: " line in the help message. Inserted after the generated usage instructions for all normal positional args.
+     * Example: when set to "[-- extraArgs...]", the help message might say `Usage: application --namedArg <namedArg> <requiredPositional> [-- extraArgs...]`
+     */
+    readonly positionalArgsText?: string;
+    /**
      * Specifies the behavior if there is a named arg that the command does not accept.
      *
      * Default: `"error"`.
