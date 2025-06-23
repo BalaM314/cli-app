@@ -53,9 +53,10 @@ export class Application {
     /** The name used to run this application. Will be used in error suggestions. */
     name, 
     /** A description for this application. Will be used in help messages. */
-    description) {
+    description, options = {}) {
         this.name = name;
         this.description = description;
+        this.options = options;
         /** Stores all subcommands. */
         this.commands = {};
         /** Stores all command aliases. */
@@ -367,7 +368,7 @@ Usage: ${this.name} [subcommand] [options]
         const nodeArgs = rawArgs.slice(0, 2);
         const { setProcessExitCodeOnHandlerReturn = true, throwOnError = false, } = runOptions;
         this.currentRunOptions = runOptions;
-        this.sourceDirectory = path.join(fs.realpathSync(rawArgs[1]), "..");
+        this.sourceDirectory = path.join(fs.realpathSync(rawArgs[1]), "..", this.options.sourceDirectorySuffix ?? "");
         //We need to do some argument parsing to determine which subcommand to run
         //but, once the subcommand has been determined, valueless args may change the parse result
         //solution: parse args twice

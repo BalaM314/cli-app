@@ -8,7 +8,8 @@ myApp.command("doStuff").description("does stuff").args({
 		sus: arg().optional(),
 		option: arg().optional(),
 	}
-}).impl((opts) => {
+}).impl((opts, app) => {
+	console.log(app.sourceDirectory);
 	if(opts.namedArgs.sus){
 		process.stdout.write("sussy ");
 	}

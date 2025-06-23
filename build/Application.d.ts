@@ -196,6 +196,14 @@ export declare class Application {
     name: string;
     /** A description for this application. Will be used in help messages. */
     description: string;
+    options: {
+        /**
+         * If provided, this is joined to the end of the directory containing the executed file when determining source directory.
+         * Example: if the main file's path is `/foo/app/build/cli.js` and the source directory suffix is `..`,
+         * the source directory will be `/foo/app` instead of `/foo/app/build`.
+         */
+        sourceDirectorySuffix?: string;
+    };
     /** Stores all subcommands. */
     commands: Record<string, Subcommand>;
     /** Stores all command aliases. */
@@ -209,7 +217,14 @@ export declare class Application {
     /** The name used to run this application. Will be used in error suggestions. */
     name: string, 
     /** A description for this application. Will be used in help messages. */
-    description: string);
+    description: string, options?: {
+        /**
+         * If provided, this is joined to the end of the directory containing the executed file when determining source directory.
+         * Example: if the main file's path is `/foo/app/build/cli.js` and the source directory suffix is `..`,
+         * the source directory will be `/foo/app` instead of `/foo/app/build`.
+         */
+        sourceDirectorySuffix?: string;
+    });
     /**
      * Adds a subcommand to this application.
      * Uses the builder pattern.
