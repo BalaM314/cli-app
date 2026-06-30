@@ -213,6 +213,12 @@ export declare class Application {
     /** The directory containing this application's main file. Uses slash or backslash dependent on platform. */
     sourceDirectory: string;
     private currentRunOptions;
+    /**
+     * The type of error that this application throws.
+     * Use setError() to set your own custom error class.
+     * Useful if your project does not always link to cli-app and needs its own error class
+     */
+    private error;
     constructor(
     /** The name used to run this application. Will be used in error suggestions. */
     name: string, 
@@ -330,6 +336,12 @@ export declare class Application {
     alias(alias: string, target: string): this;
     /** Returns the name of this application's only command, if it exists. If there are zero or multiple commands, returns undefined. */
     getOnlyCommand(): string | undefined;
+    /**
+     * Sets the type of error that this application throws to indicate an expected failure.
+     * For example, `throw new ApplicationError("message")` will cleanly print
+     * Useful if your project does not always link to cli-app and needs its own error class.
+     */
+    setError(error: new (message: string, ...args: any[]) => Error): void;
     /** Runs the help command for this application. Do not call directly. */
     private runHelpCommand;
     /**

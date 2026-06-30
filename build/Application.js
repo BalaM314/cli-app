@@ -62,6 +62,12 @@ export class Application {
         /** Stores all command aliases. */
         this.aliases = {};
         this.currentRunOptions = null;
+        /**
+         * The type of error that this application throws.
+         * Use setError() to set your own custom error class.
+         * Useful if your project does not always link to cli-app and needs its own error class
+         */
+        this.error = ApplicationError;
         const helpCommand = new Subcommand("help", this.runHelpCommand.bind(this), "Displays help information about all subcommands or a specific subcommand.", {
             positionalArgs: [{
                     name: "subcommand",
@@ -214,6 +220,14 @@ export class Application {
         }
         return undefined;
     }
+    /**
+     * Sets the type of error that this application throws to indicate an expected failure.
+     * For example, `throw new ApplicationError("message")` will cleanly print
+     * Useful if your project does not always link to cli-app and needs its own error class.
+     */
+    setError(error) {
+        this.error = error;
+    }
     /** Runs the help command for this application. Do not call directly. */
     runHelpCommand(opts) {
         const firstPositionalArg = opts.positionalArgs[0] ?? this.getOnlyCommand();
@@ -259,7 +273,7 @@ export class Application {
                 outputText.addLine(aliases.length != 0, `Aliases: ${aliases.join(", ")}`);
                 if (Object.keys(this.commands).join(",") == "help") {
                     outputText.addLine();
-                    outputText.addLine(`This application has no commands. There is likely something wrong with the installation`);
+                    outputText.addLine(`This application has no commands. There is likely something wrong with the installation.`);
                 }
                 process.stdout.write(outputText.text());
             }
@@ -412,9 +426,9 @@ Usage: ${this.name} [subcommand] [options]
         catch (err) {
             if (throwOnError)
                 throw err;
-            if (err instanceof ApplicationError) {
+            if (err instanceof this.error) {
                 console.error(`Error: ${err.message}`);
-                if (setProcessExitCodeOnHandlerReturn)
+                if (setProcessExitCodeOnHandlerReturn && "exitCode" in err && typeof err.exitCode == "number")
                     process.exitCode = err.exitCode;
             }
             else {

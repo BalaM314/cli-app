@@ -289,6 +289,12 @@ export class Application {
 	/** The directory containing this application's main file. Uses slash or backslash dependent on platform. */
 	public sourceDirectory: string;
 	private currentRunOptions: ApplicationRunOptions | null = null;
+	/**
+	 * The type of error that this application throws.
+	 * Use setError() to set your own custom error class.
+	 * Useful if your project does not always link to cli-app and needs its own error class
+	 */
+	private error: new (message:string, ...args:any[]) => Error = ApplicationError;
 	constructor(
 		/** The name used to run this application. Will be used in error suggestions. */
 		public name: string,
@@ -482,6 +488,14 @@ export class Application {
 			if(name == this.name) return name;
 		}
 		return undefined;
+	}
+	/**
+	 * Sets the type of error that this application throws to indicate an expected failure.
+	 * For example, `throw new ApplicationError("message")` will cleanly print 
+	 * Useful if your project does not always link to cli-app and needs its own error class.
+	 */
+	setError(error: new (message:string, ...args:any[]) => Error){
+		this.error = error;
 	}
 	/** Runs the help command for this application. Do not call directly. */
 	private runHelpCommand(opts:Expand<ComputeOptions<Record<string, NamedArgData>>>):number {
@@ -697,9 +711,10 @@ Usage: ${this.name} [subcommand] [options]
 			}
 		} catch(err){
 			if(throwOnError) throw err;
-			if(err instanceof ApplicationError){
+			if(err instanceof this.error){
 				console.error(`Error: ${err.message}`);
-				if(setProcessExitCodeOnHandlerReturn) process.exitCode = err.exitCode;
+				if(setProcessExitCodeOnHandlerReturn && "exitCode" in err && typeof err.exitCode == "number")
+					process.exitCode = err.exitCode;
 			} else {
 				console.error("The command encountered an unhandled runtime error.");
 				console.error(err);
