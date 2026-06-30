@@ -257,6 +257,10 @@ export class Application {
                     outputText.addLine();
                 }
                 outputText.addLine(aliases.length != 0, `Aliases: ${aliases.join(", ")}`);
+                if (Object.keys(this.commands).join(",") == "help") {
+                    outputText.addLine();
+                    outputText.addLine(`This application has no commands. There is likely something wrong with the installation`);
+                }
                 process.stdout.write(outputText.text());
             }
             else {

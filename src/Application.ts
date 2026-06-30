@@ -539,6 +539,10 @@ export class Application {
 				}
 
 				outputText.addLine(aliases.length != 0, `Aliases: ${aliases.join(", ")}`);
+				if(Object.keys(this.commands).join(",") == "help"){
+					outputText.addLine();
+					outputText.addLine(`This application has no commands. There is likely something wrong with the installation.`);
+				}
 				process.stdout.write(outputText.text());
 			} else {
 				console.log(`Unknown subcommand ${firstPositionalArg}. Run ${this.name} help for a list of all commands.`);
