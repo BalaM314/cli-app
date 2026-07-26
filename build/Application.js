@@ -10,7 +10,7 @@ Contains the code for the Application class, which represents a command-line app
 import path from "node:path";
 import fs from "node:fs";
 import { ApplicationError, StringBuilder } from "./classes.js";
-import { crash, fail, invalidConfig } from "./funcs.js";
+import { crash, invalidConfig } from "./funcs.js";
 /** Helper function to define a named argument. Uses the builder pattern. */
 export const arg = (() => {
     const ArgBuilderPrototype = {
@@ -68,7 +68,7 @@ export class Application {
          * Useful if your project does not always link to cli-app and needs its own error class
          */
         this.error = ApplicationError;
-        const helpCommand = new Subcommand("help", this.runHelpCommand.bind(this), "Displays help information about all subcommands or a specific subcommand.", {
+        const helpCommand = new Subcommand("help", this.runHelpCommand.bind(this), "Displays help information about all subcommands or a specific subcommand.", this.error, {
             positionalArgs: [{
                     name: "subcommand",
                     description: "The subcommand to get information about.",
@@ -100,7 +100,7 @@ export class Application {
                     impl(impl) {
                         if (app.commands[name])
                             invalidConfig(`Cannot register a subcommand with name "${name}" because there is already a subcommand with that name`);
-                        const subcommand = new Subcommand(this["~name"], impl, this["~description"], argOptions, this["~default"]);
+                        const subcommand = new Subcommand(this["~name"], impl, this["~description"], app.error, argOptions, this["~default"]);
                         app.commands[name] = subcommand;
                         if (this["~default"])
                             app.defaultSubcommand = subcommand;
@@ -443,10 +443,11 @@ Usage: ${this.name} [subcommand] [options]
  */
 export class Subcommand {
     constructor(name, handler, //use any to avoid contravariance
-    description, argOptions = { namedArgs: {}, positionalArgs: [] }, defaultCommand = false) {
+    description, error = ApplicationError, argOptions = { namedArgs: {}, positionalArgs: [] }, defaultCommand = false) {
         this.name = name;
         this.handler = handler;
         this.description = description;
+        this.error = error;
         this.defaultCommand = defaultCommand;
         /**
          * Set to an {@link Application} if this subcommand is a category.
@@ -502,7 +503,7 @@ export class Subcommand {
             //Count check
             const message = `this subcommand expects at most ${this.argOptions.positionalArgs.length} positional arguments, but ${positionalArgs.length} arguments were passed`;
             if (this.argOptions.positionalArgCountCheck == "error")
-                fail(message + `\n` + usageInstructionsMessage);
+                throw new this.error(message + `\n` + usageInstructionsMessage);
             else if (this.argOptions.positionalArgCountCheck == "warn")
                 console.warn(`Warning: ` + message);
         }
@@ -513,7 +514,7 @@ export class Subcommand {
                 else if (arg.optional)
                     positionalArgs[i] = undefined;
                 else
-                    fail(`Missing required positional argument "${arg.name}"
+                    throw new this.error(`Missing required positional argument "${arg.name}"
 this subcommand expects at least ${this.argOptions.positionalArgs.filter(o => !o.optional).length} positional arguments, but ${positionalArgs.length} arguments were passed
 ${usageInstructionsMessage}`);
             }
@@ -535,7 +536,7 @@ ${usageInstructionsMessage}`);
                     if (this.argOptions.unexpectedNamedArgCheck == "warn")
                         console.warn(message);
                     else if (this.argOptions.unexpectedNamedArgCheck == "error")
-                        fail(message + "\n" + usageInstructionsMessage);
+                        throw new this.error(message + "\n" + usageInstructionsMessage);
                 }
             });
         }
@@ -550,7 +551,7 @@ ${usageInstructionsMessage}`);
                     }
                 }
                 else
-                    fail(
+                    throw new this.error(
                     //If it's required, fail with an error
                     `No value specified for required named argument "${name}".
 To specify it, run the command with --${name}${opt["~valueless"] ? "" : " <value>"}

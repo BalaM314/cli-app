@@ -12,7 +12,7 @@ import path from "node:path";
 import fs from "node:fs";
 import { ApplicationError, StringBuilder } from "./classes.js";
 import type { Expand, OmitFunctionProperties, PickFunctionProperties } from "./types.js";
-import { crash, fail, invalidConfig } from "./funcs.js";
+import { crash, invalidConfig } from "./funcs.js";
 
 //#region Types
 /** Extra options to customize the behavior of {@link Application.run}. */
@@ -313,6 +313,7 @@ export class Application {
 			"help",
 			this.runHelpCommand.bind(this),
 			"Displays help information about all subcommands or a specific subcommand.",
+			this.error,
 			{
 				positionalArgs: [{
 					name: "subcommand",
@@ -371,7 +372,7 @@ export class Application {
 					...this,
 					impl(impl){
 						if(app.commands[name]) invalidConfig(`Cannot register a subcommand with name "${name}" because there is already a subcommand with that name`);
-						const subcommand = new Subcommand(this["~name"], impl, this["~description"], argOptions, this["~default"]);
+						const subcommand = new Subcommand(this["~name"], impl, this["~description"], app.error, argOptions, this["~default"]);
 						app.commands[name] = subcommand;
 						if(this["~default"]) app.defaultSubcommand = subcommand;
 						this["~aliases"].forEach(alias => app.aliases[alias] = name);
@@ -739,6 +740,7 @@ export class Subcommand {
 		public name:string,
 		public handler:CommandHandler<any, any>, //use any to avoid contravariance
 		public description:string | undefined,
+		private error: new (message:string, ...args:any[]) => Error = ApplicationError,
 		argOptions:ArgOptions<Record<string, NamedArgData>> = {namedArgs: {}, positionalArgs: []},
 		public defaultCommand = false,
 	){
@@ -803,14 +805,14 @@ export class Subcommand {
 		if(positionalArgs.length > this.argOptions.positionalArgs.length){
 			//Count check
 			const message = `this subcommand expects at most ${this.argOptions.positionalArgs.length} positional arguments, but ${positionalArgs.length} arguments were passed`;
-			if(this.argOptions.positionalArgCountCheck == "error") fail(message + `\n` + usageInstructionsMessage);
+			if(this.argOptions.positionalArgCountCheck == "error") throw new this.error(message + `\n` + usageInstructionsMessage);
 			else if(this.argOptions.positionalArgCountCheck == "warn") console.warn(`Warning: ` + message);
 		}
 		for(const [i, arg] of this.argOptions.positionalArgs.entries()){
 			if(i >= positionalArgs.length){
 				if(arg.default != null) positionalArgs[i] = arg.default;
 				else if(arg.optional) positionalArgs[i] = undefined;
-				else fail(
+				else throw new this.error(
 `Missing required positional argument "${arg.name}"
 this subcommand expects at least ${this.argOptions.positionalArgs.filter(o => !o.optional).length} positional arguments, but ${positionalArgs.length} arguments were passed
 ${usageInstructionsMessage}`
@@ -833,7 +835,7 @@ ${usageInstructionsMessage}`
 				if(!(name in this.argOptions.namedArgs || name in this.argOptions.aliases || name == "help" || name == "?")){
 					const message = `Unexpected argument --${name}${value === null ? "" : `=${value!}`}`;
 					if(this.argOptions.unexpectedNamedArgCheck == "warn") console.warn(message);
-					else if(this.argOptions.unexpectedNamedArgCheck == "error") fail(message + "\n" + usageInstructionsMessage);
+					else if(this.argOptions.unexpectedNamedArgCheck == "error") throw new this.error(message + "\n" + usageInstructionsMessage);
 				}
 			});
 		}
@@ -845,7 +847,7 @@ ${usageInstructionsMessage}`
 					if(!opt["~valueless"]){
 						namedArgs[name] = name in namedArgs ? null : undefined;
 					}
-				} else fail(
+				} else throw new this.error(
 					//If it's required, fail with an error
 `No value specified for required named argument "${name}".
 To specify it, run the command with --${name}${opt["~valueless"] ? "" : " <value>"}

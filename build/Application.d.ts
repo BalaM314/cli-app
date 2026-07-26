@@ -376,6 +376,7 @@ export declare class Subcommand {
     name: string;
     handler: CommandHandler<any, any>;
     description: string | undefined;
+    private error;
     defaultCommand: boolean;
     /**
      * Information describing the command-line options that this subcommand accepts.
@@ -386,7 +387,7 @@ export declare class Subcommand {
      */
     subcategoryApp: Application | null;
     constructor(name: string, handler: CommandHandler<any, any>, //use any to avoid contravariance
-    description: string | undefined, argOptions?: ArgOptions<Record<string, NamedArgData>>, defaultCommand?: boolean);
+    description: string | undefined, error?: new (message: string, ...args: any[]) => Error, argOptions?: ArgOptions<Record<string, NamedArgData>>, defaultCommand?: boolean);
     /** Runs this subcommand. Do not call directly, call the application's run method instead. */
     run(args: readonly string[], nodeArgs: [string, string], application: Application): number | void | Promise<number | void>;
 }
